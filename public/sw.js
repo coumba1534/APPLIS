@@ -1,7 +1,9 @@
 // Service worker : l'appli et le texte du Coran restent disponibles sans connexion.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `khatam-${VERSION}`;
-const PRECACHE = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon.svg', '/data/ar.json'];
+// Chemins relatifs à l'emplacement du service worker (racine du site ou sous-dossier).
+const ROOT = new URL('./', self.location).href;
+const PRECACHE = ['', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon.svg', 'data/ar.json'].map((p) => ROOT + p);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -26,8 +28,8 @@ self.addEventListener('fetch', (event) => {
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
-        .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put('/', copy)); return res; })
-        .catch(() => caches.match('/')),
+        .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(ROOT, copy)); return res; })
+        .catch(() => caches.match(ROOT)),
     );
     return;
   }
@@ -50,7 +52,7 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       const open = list.find((c) => 'focus' in c);
-      return open ? open.focus() : self.clients.openWindow('/');
+      return open ? open.focus() : self.clients.openWindow(ROOT);
     }),
   );
 });

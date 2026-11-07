@@ -34,7 +34,7 @@ export async function askNotifications() {
 export async function notify(title: string, body: string, tag?: string) {
   if (notificationPermission() !== 'granted') return false;
   const reg = await navigator.serviceWorker.ready;
-  await reg.showNotification(title, { body, tag, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' });
+  await reg.showNotification(title, { body, tag, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' });
   return true;
 }
 
