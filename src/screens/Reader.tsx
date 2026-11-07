@@ -23,6 +23,12 @@ export function Reader({ target, setTarget, onTitle }: {
   const [fr, setFr] = useState<string[][] | null>(null);
   const [error, setError] = useState(false);
   const [panel, setPanel] = useState(false);
+  useEffect(() => {
+    if (!panel) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPanel(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [panel]);
 
   useEffect(() => { loadArabic().then(setAr).catch(() => setError(true)); }, []);
   useEffect(() => { if (prefs.french && !fr) loadFrench().then(setFr).catch(() => toast('La traduction n\'a pas pu être chargée.')); }, [prefs.french]);
@@ -97,33 +103,44 @@ export function Reader({ target, setTarget, onTitle }: {
             <button aria-pressed={!prefs.french} onClick={() => setPrefs({ french: false })}>Arabe</button>
             <button aria-pressed={prefs.french} onClick={() => setPrefs({ french: true })}>+ Français</button>
           </div>
-          <button class="ghost" aria-expanded={panel} onClick={() => setPanel(!panel)}>Aa Écriture</button>
           {s.bookmark && <span class="mark-info">Marque-page : {SURAHS[s.bookmark.s - 1][1]} {s.bookmark.n}</span>}
         </div>
       </div>
 
+      <button class="fab" aria-label="Choisir l'écriture et la taille du texte" aria-expanded={panel} onClick={() => setPanel(true)}>Aa</button>
+
       {panel && (
-        <div class="panel">
-          <h3>Écriture du Coran</h3>
-          <div class="scripts">
-            {SCRIPTS.map((x) => (
-              <button class="script" aria-pressed={x.id === script.id} onClick={() => setPrefs({ script: x.id, spacing: null })}>
-                <span class="smp" style={{ fontFamily: x.font }}>{BISMILLAH}</span><b>{x.name}</b><small>{x.desc}</small>
-              </button>
-            ))}
+        <div class="sheet-backdrop" onClick={() => setPanel(false)}>
+          <div class="sheet" role="dialog" aria-label="Réglages de lecture" onClick={(e) => e.stopPropagation()}>
+            <div class="sheet-head">
+              <b>Écriture du Coran</b>
+              <button class="close" aria-label="Fermer" onClick={() => setPanel(false)}>✕</button>
+            </div>
+            <div class="scripts">
+              {SCRIPTS.map((x) => (
+                <button class="script" aria-pressed={x.id === script.id} onClick={() => setPrefs({ script: x.id, spacing: null })}>
+                  <span class="smp" style={{ fontFamily: x.font }}>{BISMILLAH}</span><b>{x.name}</b><small>{x.desc}</small>
+                </button>
+              ))}
+            </div>
+            <div class="prow"><span>Taille du texte</span><div class="seg">
+              <button aria-label="Texte plus petit" onClick={() => setPrefs({ size: Math.max(18, prefs.size - 3) })}>A−</button>
+              <button aria-label="Texte plus grand" onClick={() => setPrefs({ size: Math.min(44, prefs.size + 3) })}>A+</button>
+            </div></div>
+            <div class="prow"><span>Espacement des lignes</span><div class="seg">
+              <button aria-pressed={(prefs.spacing ?? script.spacing ?? 2.1) < 2.5} onClick={() => setPrefs({ spacing: 2.1 })}>Normal</button>
+              <button aria-pressed={(prefs.spacing ?? script.spacing ?? 2.1) >= 2.5} onClick={() => setPrefs({ spacing: 2.6 })}>Aéré</button>
+            </div></div>
+            <div class="prow"><span>Fond de page</span><div class="seg">
+              <button aria-pressed={!prefs.paper} onClick={() => setPrefs({ paper: false })}>Clair</button>
+              <button aria-pressed={prefs.paper} onClick={() => setPrefs({ paper: true })}>Papier</button>
+            </div></div>
+            <div class="prow"><span>Traduction française</span><div class="seg">
+              <button aria-pressed={!prefs.french} onClick={() => setPrefs({ french: false })}>Non</button>
+              <button aria-pressed={prefs.french} onClick={() => setPrefs({ french: true })}>Oui</button>
+            </div></div>
+            <button class="btn teal" onClick={() => setPanel(false)}>Terminé</button>
           </div>
-          <div class="prow"><span>Taille du texte</span><div class="seg">
-            <button aria-label="Texte plus petit" onClick={() => setPrefs({ size: Math.max(18, prefs.size - 3) })}>A−</button>
-            <button aria-label="Texte plus grand" onClick={() => setPrefs({ size: Math.min(44, prefs.size + 3) })}>A+</button>
-          </div></div>
-          <div class="prow"><span>Espacement des lignes</span><div class="seg">
-            <button aria-pressed={(prefs.spacing ?? script.spacing ?? 2.1) < 2.5} onClick={() => setPrefs({ spacing: 2.1 })}>Normal</button>
-            <button aria-pressed={(prefs.spacing ?? script.spacing ?? 2.1) >= 2.5} onClick={() => setPrefs({ spacing: 2.6 })}>Aéré</button>
-          </div></div>
-          <div class="prow"><span>Fond de page</span><div class="seg">
-            <button aria-pressed={!prefs.paper} onClick={() => setPrefs({ paper: false })}>Clair</button>
-            <button aria-pressed={prefs.paper} onClick={() => setPrefs({ paper: true })}>Papier</button>
-          </div></div>
         </div>
       )}
 

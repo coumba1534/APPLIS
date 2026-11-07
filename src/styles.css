@@ -153,6 +153,22 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .rnav { display: flex; justify-content: space-between; gap: 8px }
 .credit { font-size: 11px; color: var(--muted); text-align: center; margin: 0 }
 
+/* Bouton flottant et fenêtre de réglages de lecture */
+.fab { position: fixed; z-index: 5; right: max(18px, calc((100vw - 560px) / 2 + 18px), env(safe-area-inset-right, 0px));
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px)); width: 54px; height: 54px; border-radius: 50%; border: 0;
+  background: var(--teal); color: var(--on-teal); font: 700 19px var(--display); box-shadow: 0 6px 18px -6px rgba(10, 40, 30, .5) }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 12; background: rgba(8, 20, 17, .35); display: flex; align-items: flex-end; justify-content: center; animation: fade .2s }
+.sheet { width: 100%; max-width: 560px; max-height: 72vh; overflow-y: auto; background: var(--surface); border-radius: 22px 22px 0 0;
+  padding: 10px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+  display: grid; gap: 12px; animation: up .25s ease-out; box-shadow: 0 -10px 30px -12px rgba(0, 0, 0, .3) }
+.sheet::before { content: ""; justify-self: center; width: 40px; height: 4px; border-radius: 9px; background: var(--line) }
+.sheet-head { display: flex; justify-content: space-between; align-items: center }
+.sheet-head b { font-family: var(--display); font-size: 17px }
+.close { border: 0; background: var(--bg); width: 34px; height: 34px; border-radius: 50%; font-size: 15px; color: var(--muted) }
+.sheet .script .smp { font-size: 18px; line-height: 1.7 }
+@keyframes up { from { transform: translateY(100%) } }
+@keyframes fade { from { opacity: 0 } }
+
 /* Écrans plein cadre */
 .overlay { position: fixed; inset: 0; z-index: 10; background: var(--surface); overflow-y: auto }
 .overlay .inner { max-width: 520px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; gap: 16px;
