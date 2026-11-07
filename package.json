@@ -1,0 +1,21 @@
+{
+  "name": "khatam-entre-soeurs",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Khatam entre sœurs : un juz par jour pendant le Ramadan, chacune à son rythme, ensemble.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "icons": "node scripts/icons.mjs"
+  },
+  "dependencies": {
+    "preact": "10.29.8"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "2.10.6",
+    "typescript": "5.9.3",
+    "vite": "6.4.5"
+  }
+}
