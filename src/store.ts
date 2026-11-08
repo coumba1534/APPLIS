@@ -22,6 +22,8 @@ export interface State {
   catchPlan: CatchPlan | null;
   bookmark: { s: number; n: number } | null;
   reader: ReaderPrefs;
+  /** Apparence : 'auto' suit le réglage du téléphone. */
+  theme: 'auto' | 'light' | 'dark';
   /** Heures de rappel personnalisées, clé `${programmeId}:${index}`. */
   reminderTimes: Record<string, string>;
   reminders: { sessions: boolean; lateEvening: boolean };
@@ -43,6 +45,7 @@ const initial: State = {
   sessions: {},
   catchPlan: null,
   bookmark: null,
+  theme: 'auto',
   reader: { script: 'medine', size: 26, spacing: null, paper: false, french: false, layout: 'scroll' },
   reminderTimes: {},
   reminders: { sessions: true, lateEvening: true },

@@ -2,19 +2,25 @@
 :root {
   --bg: #E9EEEA; --surface: #FBFCFA; --ink: #14302B; --muted: #5F716C; --line: #D5DED9;
   --teal: #1F5C52; --teal-soft: #DCEAE5; --saffron: #B8741F; --saffron-soft: #F4E6D1;
-  --late: #B4483C; --late-soft: #F5DEDA; --paper: #F6EEDC; --paper-ink: #2B2416; --on-teal: #FBFCFA;
+  --late: #B4483C; --late-soft: #F5DEDA; --paper: #F6EEDC; --paper-ink: #2B2416; --on-teal: #FBFCFA; --on-saffron: #FFFFFF; --aya-paper: #8A5A16; --hero: #1F5C52; --on-hero: #FBFCFA;
   --display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --body: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
   --arabic: "Amiri", "Noto Naskh Arabic", serif;
   --quran: "Scheherazade New", "Noto Naskh Arabic", serif;
   color-scheme: light;
 }
+/* Thème sombre : automatique (réglage du téléphone) ou choisi dans l'appli (data-theme sur <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0B1513; --surface: #12201D; --ink: #E4EEEA; --muted: #93A6A0; --line: #24362F;
     --teal: #6FC1AE; --teal-soft: #1B3530; --saffron: #E3A456; --saffron-soft: #3A2B17;
-    --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; color-scheme: dark;
+    --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #0B1513; --surface: #12201D; --ink: #E4EEEA; --muted: #93A6A0; --line: #24362F;
+  --teal: #6FC1AE; --teal-soft: #1B3530; --saffron: #E3A456; --saffron-soft: #3A2B17;
+  --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
 }
 * { box-sizing: border-box }
 [hidden] { display: none !important }
@@ -31,6 +37,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
   display: flex; justify-content: space-between; align-items: center; gap: 12px }
 .top b { font-family: var(--display); font-size: 19px; display: block }
 .top small { color: var(--muted); font-size: 12px }
+.theme-btn { border: 1px solid var(--line); background: transparent; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); flex: 0 0 36px }
+.theme-btn svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+.top-right { display: flex; align-items: center; gap: 8px }
 .streak { background: var(--saffron-soft); color: var(--saffron); font-weight: 700; border-radius: 999px; padding: 5px 11px; font-size: 13px; white-space: nowrap }
 main { flex: 1; padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(96px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); display: grid; gap: 16px; align-content: start; min-width: 0 }
 h2 { font-family: var(--display); font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 4px 0 -6px; font-weight: 500 }
@@ -43,9 +52,9 @@ nav.tabs button { border: 0; background: transparent; color: var(--muted); font:
 nav.tabs svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
 nav.tabs button[aria-current="page"] { color: var(--teal) }
 
-.btn { border: 0; border-radius: 14px; padding: 13px 16px; font-weight: 700; background: var(--saffron); color: #fff }
+.btn { border: 0; border-radius: 14px; padding: 13px 16px; font-weight: 700; background: var(--saffron); color: var(--on-saffron) }
 .btn.teal { background: var(--teal); color: var(--on-teal) }
-.btn.soft { background: color-mix(in srgb, var(--on-teal) 20%, transparent); color: inherit }
+.btn.soft { background: color-mix(in srgb, var(--on-hero) 20%, transparent); color: inherit }
 .ghost { border: 1px solid var(--line); background: transparent; border-radius: 10px; padding: 8px 12px; font-weight: 700; font-size: 13px }
 .link { border: 0; background: transparent; color: inherit; font-weight: 700; text-decoration: underline; padding: 0; justify-self: start }
 .card { border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 10px }
@@ -55,7 +64,7 @@ nav.tabs button[aria-current="page"] { color: var(--teal) }
 @font-face { font-family: "KFGQPC Hafs"; src: url("./fonts/UthmanicHafs-v3.ttf") format("truetype"); font-display: swap }
 
 /* Carte du jour */
-.today { background: var(--teal); color: var(--on-teal); border-radius: 22px; padding: 20px; display: grid; gap: 14px }
+.today { background: var(--hero); color: var(--on-hero); border-radius: 22px; padding: 20px; display: grid; gap: 14px }
 .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px }
 .today .small { font-size: 13px; opacity: .85; font-variant-numeric: tabular-nums }
 .today .juz { font-family: var(--display); font-size: 34px; font-weight: 700; line-height: 1 }
@@ -63,10 +72,10 @@ nav.tabs button[aria-current="page"] { color: var(--teal) }
 .bar { height: 8px; border-radius: 99px; background: color-mix(in srgb, currentColor 22%, transparent); overflow: hidden }
 .bar i { display: block; height: 100%; background: currentColor; border-radius: 99px; transition: width .3s }
 .sessions { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0 }
-.sess { display: flex; align-items: center; gap: 12px; background: color-mix(in srgb, var(--on-teal) 12%, transparent); border-radius: 14px; padding: 10px 12px; cursor: pointer }
+.sess { display: flex; align-items: center; gap: 12px; background: color-mix(in srgb, var(--on-hero) 12%, transparent); border-radius: 14px; padding: 10px 12px; cursor: pointer }
 .sess input { appearance: none; flex: 0 0 24px; height: 24px; border-radius: 50%; border: 2px solid currentColor; margin: 0; background: transparent; display: grid; place-items: center; cursor: pointer }
 .sess input:checked { background: var(--saffron); border-color: var(--saffron) }
-.sess input:checked::after { content: "✓"; color: #fff; font-size: 14px; font-weight: 700 }
+.sess input:checked::after { content: "✓"; color: var(--on-saffron); font-size: 14px; font-weight: 700 }
 .sess div { flex: 1; min-width: 0 }
 .sess small { display: block; font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums }
 .sess.ok b { text-decoration: line-through; opacity: .75 }
@@ -171,7 +180,7 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .mline.text.center { justify-content: center; gap: .35em }
 .mline span { cursor: pointer; border-radius: 4px }
 .mline .aya { color: var(--saffron) }
-.mushaf.paper .mline .aya { color: #8A5A16 }
+.mushaf.paper .mline .aya { color: var(--aya-paper) }
 .mline .mk { background: color-mix(in srgb, var(--saffron) 28%, transparent) }
 .mline.head { text-align: center; padding: 2px 0 }
 .mline.head .frame { display: inline-block; min-width: 70%; border: 1px solid var(--saffron); border-radius: 10px; background: var(--saffron-soft);
@@ -232,14 +241,14 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .choice[aria-pressed="true"] { border: 2px solid var(--teal); background: var(--teal-soft) }
 .actions { display: flex; gap: 10px; align-items: center }
 .actions .btn { flex: 1 }
-.finale { background: var(--teal); color: var(--on-teal) }
+.finale { background: var(--hero); color: var(--on-hero) }
 .finale .inner { text-align: center; align-items: center }
 .finale p { color: inherit; opacity: .85 }
 .moon { font-size: 56px; line-height: 1 }
 .figs { display: flex; gap: 18px; justify-content: center; font-variant-numeric: tabular-nums }
 .figs b { display: block; font-family: var(--display); font-size: 24px }
 .figs span { font-size: 12px; opacity: .8 }
-.dua { background: color-mix(in srgb, var(--on-teal) 12%, transparent); border-radius: 16px; padding: 14px; display: grid; gap: 8px; width: 100% }
+.dua { background: color-mix(in srgb, var(--on-hero) 12%, transparent); border-radius: 16px; padding: 14px; display: grid; gap: 8px; width: 100% }
 .dua .ar { font-family: var(--quran); font-size: 22px; line-height: 2; direction: rtl }
 .dua .fr, .dua small { font-size: 13px; text-align: left }
 .dua small { opacity: .75 }

@@ -6,6 +6,7 @@ import {
 } from '../data/quran';
 import { toast } from '../ui';
 import { PageView } from './PageView';
+import { setTheme } from '../theme';
 
 export const SCRIPTS = [
   { id: 'medine', font: '"KFGQPC Hafs"', name: 'Mushaf de Médine', desc: 'Écriture officielle du Complexe Roi Fahd', text: 'ar-hafs' as const, size: 2 },
@@ -272,6 +273,11 @@ export function Reader({ target, setTarget, onTitle }: {
                 </div></div>
               </>
             )}
+            <div class="prow"><span>Apparence</span><div class="seg">
+              <button aria-pressed={(s.theme ?? 'auto') === 'light'} onClick={() => setTheme('light')}>Clair</button>
+              <button aria-pressed={s.theme === 'dark'} onClick={() => setTheme('dark')}>Sombre</button>
+              <button aria-pressed={(s.theme ?? 'auto') === 'auto'} onClick={() => setTheme('auto')}>Auto</button>
+            </div></div>
             <div class="prow"><span>Fond de page</span><div class="seg">
               <button aria-pressed={!prefs.paper} onClick={() => setPrefs({ paper: false })}>Clair</button>
               <button aria-pressed={prefs.paper} onClick={() => setPrefs({ paper: true })}>Papier</button>
