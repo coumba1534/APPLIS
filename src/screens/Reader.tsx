@@ -36,6 +36,8 @@ export function Reader({ target, setTarget, onTitle }: {
   const [fr, setFr] = useState<string[][] | null>(null);
   const [error, setError] = useState(false);
   const [panel, setPanel] = useState(false);
+  /** Verset à afficher en haut de l'écran après un changement de mode (numéro absolu). */
+  const [focus, setFocus] = useState<number | null>(null);
   const markAbs = s.bookmark ? absOf(s.bookmark.s, s.bookmark.n) : -1;
 
   useEffect(() => {
@@ -76,12 +78,52 @@ export function Reader({ target, setTarget, onTitle }: {
     return () => document.body.classList.remove('immersive');
   }, [pageMode]);
 
-  // Défilement : aller au marque-page quand il est dans la portion affichée.
+  // Défilement : en venant du mode page, se placer sur le même verset ;
+  // sinon aller au marque-page quand il est dans la portion affichée.
   useLayoutEffect(() => {
-    if (pageMode || !ar || !s.bookmark) return;
+    if (pageMode || !ar || ar.kind !== textKind) return;
+    if (focus !== null) {
+      const { s: fs, n: fn } = posOf(focus);
+      const el = document.getElementById(`v${fs}-${fn}`);
+      if (el) {
+        el.scrollIntoView({ block: 'start' });
+        el.classList.add('flash');
+        window.setTimeout(() => el.classList.remove('flash'), 1600);
+      }
+      setFocus(null);
+      return;
+    }
+    if (!s.bookmark) return;
     const el = document.getElementById(`v${s.bookmark.s}-${s.bookmark.n}`);
     if (el) el.scrollIntoView({ block: 'center' }); else window.scrollTo(0, 0);
-  }, [ar, a, pageMode]);
+  }, [ar, a, pageMode, focus]);
+
+  // En défilement : retenir le verset en haut de l'écran (pour les menus et le changement de mode).
+  const [here, setHere] = useState<number | null>(null);
+  useEffect(() => {
+    if (pageMode) return;
+    let queued = false;
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; setHere(topVisibleVerse()); });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [pageMode, a, ar]);
+
+  /** Premier verset visible sous la barre d'outils, en mode défilement. */
+  const topVisibleVerse = () => {
+    const limit = (document.querySelector('.tools')?.getBoundingClientRect().bottom ?? 0) + 4;
+    for (const el of document.querySelectorAll<HTMLElement>('.verse[id]')) {
+      if (el.getBoundingClientRect().bottom > limit) {
+        const [vs, vn] = el.id.slice(1).split('-').map(Number);
+        return absOf(vs, vn);
+      }
+    }
+    return null;
+  };
 
   const style = {
     '--qf': `${script.font}, "Scheherazade New", serif`,
@@ -103,10 +145,18 @@ export function Reader({ target, setTarget, onTitle }: {
   };
   const setLayout = (l: 'scroll' | 'page') => {
     if (l === layout) return;
+    // Rester au même endroit du Coran en changeant de mode.
+    if (l === 'page') {
+      const v = topVisibleVerse() ?? a;
+      setTarget({ mode: 'page', page: pageOf(v) });
+      window.scrollTo(0, 0);
+    } else {
+      // Le marque-page s'il est sur cette page, sinon le premier verset de la page.
+      const v = markAbs >= a && markAbs <= b ? markAbs : a;
+      setFocus(v);
+      setTarget({ mode: 'juz', juz: juzOf(v) });
+    }
     setPrefs({ layout: l });
-    // Garder la même portion du Coran en changeant de mode.
-    setTarget(l === 'page' ? { mode: 'page', page } : { mode: 'juz', juz: juzOf(a) });
-    window.scrollTo(0, 0);
   };
 
   const rows = [];
@@ -135,8 +185,10 @@ export function Reader({ target, setTarget, onTitle }: {
     }
   }
 
-  const curJuz = shown.mode === 'juz' ? shown.juz : juzOf(a);
-  const curSura = shown.mode === 'sura' ? shown.sura : posOf(a).s;
+  // Les menus suivent le verset en cours de lecture.
+  const reading = !pageMode && here !== null && here >= a && here <= b ? here : a;
+  const curJuz = shown.mode === 'juz' ? shown.juz : juzOf(reading);
+  const curSura = shown.mode === 'sura' ? shown.sura : posOf(reading).s;
 
   return (
     <>

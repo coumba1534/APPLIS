@@ -148,6 +148,10 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .verse .fr { direction: ltr; text-align: left; color: var(--muted); font-size: 14px }
 .verse .fr b { color: var(--saffron); font-size: 12px; margin-right: 4px }
 .verse.marked { background: var(--saffron-soft) }
+.verse { scroll-margin-top: calc(var(--top-h, 64px) + 104px) }
+.immersive .verse { scroll-margin-top: 112px }
+.verse.flash { animation: flash 1.6s ease-out }
+@keyframes flash { from { background: color-mix(in srgb, var(--teal) 22%, transparent) } }
 .verse.marked::before { content: "Marque-page"; direction: ltr; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--saffron) }
 .pagemark { display: flex; align-items: center; gap: 10px; font-variant-numeric: tabular-nums; padding: 8px 0 }
 .pagemark::before, .pagemark::after { content: ""; flex: 1; border-top: 1px dashed color-mix(in srgb, currentColor 30%, transparent) }
