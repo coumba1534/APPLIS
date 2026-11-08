@@ -203,6 +203,15 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .sheet-head b { font-family: var(--display); font-size: 17px }
 .close { border: 0; background: var(--bg); width: 34px; height: 34px; border-radius: 50%; font-size: 15px; color: var(--muted) }
 .sheet .script .smp { font-size: 18px; line-height: 1.7 }
+.size-box { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px }
+.size-ctl { display: flex; align-items: center; gap: 8px }
+.size-ctl .ghost { min-width: 44px; padding: 7px 0; font-size: 15px }
+.size-ctl .ghost:disabled { opacity: .35 }
+.size-val { min-width: 44px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--teal) }
+.size-dots { display: flex; gap: 4px }
+.size-dots i { flex: 1; height: 5px; border-radius: 9px; background: var(--line) }
+.size-dots i.on { background: var(--teal) }
+.size-preview { direction: rtl; text-align: center; line-height: 1.9; background: var(--bg); border-radius: 10px; padding: 4px 8px }
 @keyframes up { from { transform: translateY(100%) } }
 @keyframes fade { from { opacity: 0 } }
 

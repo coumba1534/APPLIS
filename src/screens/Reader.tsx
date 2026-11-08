@@ -15,6 +15,10 @@ export const SCRIPTS = [
   { id: 'fine', font: 'Lateef', name: 'Fine et aérée', desc: 'Légère, à lire en grand', size: 4 },
 ];
 
+/** Tailles du texte proposées en mode défilement (en pixels). */
+const SIZES = [18, 20, 23, 26, 29, 32, 36, 40, 44];
+const nearestLevel = (size: number) => SIZES.reduce((best, v, i) => (Math.abs(v - size) < Math.abs(SIZES[best] - size) ? i : best), 0);
+
 export type ReaderTarget = { mode: 'juz'; juz: number } | { mode: 'sura'; sura: number } | { mode: 'page'; page: number };
 
 /** Versets (numéros absolus) couverts par une cible. */
@@ -131,6 +135,7 @@ export function Reader({ target, setTarget, onTitle }: {
     '--lh': String(prefs.spacing ?? script.spacing ?? 2.1),
   };
   const setPrefs = (p: Partial<typeof prefs>) => update({ reader: { ...prefs, ...p } });
+  const level = nearestLevel(prefs.size);
   const mark = (abs: number) => {
     const { s: si, n } = posOf(abs);
     update({ bookmark: { s: si, n } });
@@ -246,10 +251,17 @@ export function Reader({ target, setTarget, onTitle }: {
                     </button>
                   ))}
                 </div>
-                <div class="prow"><span>Taille du texte</span><div class="seg">
-                  <button aria-label="Texte plus petit" onClick={() => setPrefs({ size: Math.max(18, prefs.size - 3) })}>A−</button>
-                  <button aria-label="Texte plus grand" onClick={() => setPrefs({ size: Math.min(44, prefs.size + 3) })}>A+</button>
-                </div></div>
+                <div class="size-box">
+                  <div class="prow"><span>Taille du texte</span>
+                    <div class="size-ctl">
+                      <button class="ghost" aria-label="Texte plus petit" disabled={level === 0} onClick={() => setPrefs({ size: SIZES[level - 1] })}>A−</button>
+                      <span class="size-val" aria-live="polite">{level + 1} / {SIZES.length}</span>
+                      <button class="ghost" aria-label="Texte plus grand" disabled={level === SIZES.length - 1} onClick={() => setPrefs({ size: SIZES[level + 1] })}>A+</button>
+                    </div>
+                  </div>
+                  <div class="size-dots" aria-hidden="true">{SIZES.map((_, i) => <i class={i <= level ? 'on' : ''} />)}</div>
+                  <div class="size-preview" style={{ fontFamily: `${script.font}, "Scheherazade New", serif`, fontSize: `${prefs.size + (script.size ?? 0)}px` }}>{BISMILLAH}</div>
+                </div>
                 <div class="prow"><span>Espacement des lignes</span><div class="seg">
                   <button aria-pressed={(prefs.spacing ?? script.spacing ?? 2.1) < 2.5} onClick={() => setPrefs({ spacing: 2.1 })}>Normal</button>
                   <button aria-pressed={(prefs.spacing ?? script.spacing ?? 2.1) >= 2.5} onClick={() => setPrefs({ spacing: 2.6 })}>Aéré</button>
