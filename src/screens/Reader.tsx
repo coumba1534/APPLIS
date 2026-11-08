@@ -29,8 +29,10 @@ function versesOf(t: ReaderTarget): [number, number] {
   return [pageFirstVerse(t.page), t.page < TOTAL_PAGES ? pageFirstVerse(t.page + 1) - 1 : 6236];
 }
 
-export function Reader({ target, setTarget, onTitle }: {
+export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
   target: ReaderTarget; setTarget: (t: ReaderTarget) => void; onTitle: (t: [string, string]) => void;
+  /** 'resume' : reprendre au dernier verset lu ; 'bookmark' : aller au marque-page. */
+  start?: 'resume' | 'bookmark';
 }) {
   const s = useStore();
   const prefs = s.reader;
@@ -42,7 +44,7 @@ export function Reader({ target, setTarget, onTitle }: {
   const [error, setError] = useState(false);
   const [panel, setPanel] = useState(false);
   /** Verset à afficher en haut de l'écran après un changement de mode (numéro absolu). */
-  const [focus, setFocus] = useState<number | null>(null);
+  const [focus, setFocus] = useState<number | null>(() => (start === 'resume' ? s.readerAbs : null));
   const markAbs = s.bookmark ? absOf(s.bookmark.s, s.bookmark.n) : -1;
 
   useEffect(() => {
@@ -94,9 +96,10 @@ export function Reader({ target, setTarget, onTitle }: {
         el.scrollIntoView({ block: 'start' });
         el.classList.add('flash');
         window.setTimeout(() => el.classList.remove('flash'), 1600);
+        setFocus(null);
+        return;
       }
-      setFocus(null);
-      return;
+      setFocus(null); // verset hors de la portion affichée : on va au marque-page
     }
     if (!s.bookmark) return;
     const el = document.getElementById(`v${s.bookmark.s}-${s.bookmark.n}`);
@@ -108,10 +111,17 @@ export function Reader({ target, setTarget, onTitle }: {
   useEffect(() => {
     if (pageMode) return;
     let queued = false;
+    let saveTimer: number | undefined;
     const onScroll = () => {
       if (queued) return;
       queued = true;
-      requestAnimationFrame(() => { queued = false; setHere(topVisibleVerse()); });
+      requestAnimationFrame(() => {
+        queued = false;
+        const v = topVisibleVerse();
+        setHere(v);
+        // Retenir le verset lu, pour reprendre au même endroit à la réouverture.
+        if (v !== null) { window.clearTimeout(saveTimer); saveTimer = window.setTimeout(() => update({ readerAbs: v }), 500); }
+      });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();

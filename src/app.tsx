@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useStore, currentDay } from './store';
+import { useStore, currentDay, update } from './store';
 import { absOf, juzOf } from './data/quran';
 import { Toast, icons } from './ui';
 import { Today, streak } from './screens/Today';
@@ -17,8 +17,13 @@ const TABS: [Tab, string][] = [['today', "Aujourd'hui"], ['read', 'Lire'], ['pla
 
 export function App() {
   const s = useStore();
-  const [tab, setTab] = useState<Tab>('today');
-  const [target, setTarget] = useState<ReaderTarget>({ mode: 'juz', juz: Math.min(Math.max(currentDay(s), 1), 30) });
+  // À la réouverture, on revient sur le dernier onglet et la dernière lecture.
+  const [tab, setTabState] = useState<Tab>(() => (s.onboarded && TABS.some(([id]) => id === s.lastTab) ? s.lastTab as Tab : 'today'));
+  const [target, setTargetState] = useState<ReaderTarget>(() => s.readerTarget ?? { mode: 'juz', juz: Math.min(Math.max(currentDay(s), 1), 30) });
+  /** 'bookmark' : on ouvre Lire depuis « Reprendre au marque-page » ; 'resume' : on reprend où on en était. */
+  const [start, setStart] = useState<'resume' | 'bookmark'>('resume');
+  const setTab = (t: Tab) => { setTabState(t); update({ lastTab: t }); };
+  const setTarget = (t: ReaderTarget) => { setTargetState(t); update({ readerTarget: t }); };
   const [readerTitle, setReaderTitle] = useState<[string, string]>(['Lire', '']);
   const [finaleSeen, setFinaleSeen] = useState(s.done.length === 30);
 
@@ -47,6 +52,7 @@ export function App() {
   const openReader = () => {
     const b = s.bookmark;
     setTarget(b ? { mode: 'juz', juz: juzOf(absOf(b.s, b.n)) } : { mode: 'juz', juz: Math.min(Math.max(day, 1), 30) });
+    setStart('bookmark');
     setTab('read');
   };
 
@@ -66,14 +72,14 @@ export function App() {
       </header>
       <main>
         {tab === 'today' && <Today openReader={openReader} />}
-        {tab === 'read' && <Reader target={target} setTarget={setTarget} onTitle={setReaderTitle} />}
+        {tab === 'read' && <Reader target={target} setTarget={setTarget} onTitle={setReaderTitle} start={start} />}
         {tab === 'plan' && <Programme />}
         {tab === 'group' && <Group />}
         {tab === 'bell' && <Reminders />}
       </main>
       <nav class="tabs" aria-label="Navigation">
         {TABS.map(([id, label]) => (
-          <button aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); window.scrollTo(0, 0); }}>{icons[id]}{label}</button>
+          <button aria-current={tab === id ? 'page' : undefined} onClick={() => { setStart('resume'); setTab(id); window.scrollTo(0, 0); }}>{icons[id]}{label}</button>
         ))}
       </nav>
       {!s.onboarded && <Onboarding onDone={() => setTab('today')} />}

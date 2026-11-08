@@ -1,6 +1,7 @@
 // État de l'appli, enregistré sur le téléphone (localStorage).
 // Les groupes et la synchronisation en ligne arriveront avec Firebase (étape 2).
 import { useEffect, useState } from 'preact/hooks';
+import type { ReaderTarget } from './screens/Reader';
 
 export interface CatchPlan { juz: number; perDay: number; read: number; lastDay: string | null }
 export interface ReaderPrefs { script: string; size: number; spacing: number | null; paper: boolean; french: boolean; layout?: 'scroll' | 'page' }
@@ -22,6 +23,12 @@ export interface State {
   catchPlan: CatchPlan | null;
   bookmark: { s: number; n: number } | null;
   reader: ReaderPrefs;
+  /** Dernier onglet ouvert, pour rouvrir l'appli au même endroit. */
+  lastTab: string;
+  /** Dernière portion ouverte dans Lire (juz, sourate ou page). */
+  readerTarget: ReaderTarget | null;
+  /** Dernier verset lu en haut de l'écran, en mode défilement (numéro absolu). */
+  readerAbs: number | null;
   /** Apparence : 'auto' suit le réglage du téléphone. */
   theme: 'auto' | 'light' | 'dark';
   /** Heures de rappel personnalisées, clé `${programmeId}:${index}`. */
@@ -46,6 +53,9 @@ const initial: State = {
   catchPlan: null,
   bookmark: null,
   theme: 'auto',
+  lastTab: 'today',
+  readerTarget: null,
+  readerAbs: null,
   reader: { script: 'medine', size: 26, spacing: null, paper: false, french: false, layout: 'scroll' },
   reminderTimes: {},
   reminders: { sessions: true, lateEvening: true },
