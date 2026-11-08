@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 
 export interface CatchPlan { juz: number; perDay: number; read: number; lastDay: string | null }
-export interface ReaderPrefs { script: string; size: number; spacing: number | null; paper: boolean; french: boolean }
+export interface ReaderPrefs { script: string; size: number; spacing: number | null; paper: boolean; french: boolean; layout?: 'scroll' | 'page' }
 
 export interface State {
   version: 1;
@@ -43,7 +43,7 @@ const initial: State = {
   sessions: {},
   catchPlan: null,
   bookmark: null,
-  reader: { script: 'classique', size: 26, spacing: null, paper: false, french: false },
+  reader: { script: 'medine', size: 26, spacing: null, paper: false, french: false, layout: 'scroll' },
   reminderTimes: {},
   reminders: { sessions: true, lateEvening: true },
   shown: [],

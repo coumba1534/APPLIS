@@ -61,26 +61,33 @@ export function secondHizb(j: number) {
 /** Premier verset d'une page du mushaf. */
 export const pageFirstVerse = (p: number) => PAGE_START[p - 1];
 
-let arabic: Promise<string[][]> | null = null;
-let french: Promise<string[][]> | null = null;
+const cache = new Map<string, Promise<unknown>>();
 
-function fetchJson(url: string): Promise<string[][]> {
-  return fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  });
+function fetchJson<T>(name: string): Promise<T> {
+  let p = cache.get(name) as Promise<T> | undefined;
+  if (!p) {
+    p = fetch(`${import.meta.env.BASE_URL}data/${name}.json`).then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    });
+    p.catch(() => cache.delete(name));
+    cache.set(name, p);
+  }
+  return p;
 }
 
-/** Texte arabe uthmani : tableau [sourate][verset]. Mis en cache hors ligne par le service worker. */
-export function loadArabic() {
-  arabic ??= fetchJson(`${import.meta.env.BASE_URL}data/ar.json`).catch((e) => { arabic = null; throw e; });
-  return arabic;
-}
+/** Texte arabe [sourate][verset]. 'ar-hafs' : écriture officielle du Complexe Roi Fahd ; 'ar' : pour les autres polices. */
+export const loadArabic = (kind: 'ar' | 'ar-hafs' = 'ar') => fetchJson<string[][]>(kind);
 
 /** Traduction française de Muhammad Hamidullah : tableau [sourate][verset]. */
-export function loadFrench() {
-  french ??= fetchJson(`${import.meta.env.BASE_URL}data/fr.json`).catch((e) => { french = null; throw e; });
-  return french;
-}
+export const loadFrench = () => fetchJson<string[][]>('fr');
+
+/**
+ * Les 604 pages du mushaf de Médine, ligne par ligne (Complexe Roi Fahd, édition Hafs).
+ * Une ligne vaut ["H", sourate] (titre), ["B"] (basmala) ou une suite de mots,
+ * où un nombre marque la fin d'un verset (son numéro dans la sourate).
+ */
+export type MushafLine = (string | number)[];
+export const loadMushaf = () => fetchJson<MushafLine[][]>('mushaf');
 
 export const toArabicDigits = (n: number) => String(n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[+d]);

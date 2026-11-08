@@ -52,6 +52,8 @@ nav.tabs button[aria-current="page"] { color: var(--teal) }
 .card h3 { margin: 0; font-family: var(--display); font-size: 18px }
 .card p { margin: 0 }
 
+@font-face { font-family: "KFGQPC Hafs"; src: url("./fonts/UthmanicHafs-v3.ttf") format("truetype"); font-display: swap }
+
 /* Carte du jour */
 .today { background: var(--teal); color: var(--on-teal); border-radius: 22px; padding: 20px; display: grid; gap: 14px }
 .row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px }
@@ -152,6 +154,37 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .loading { color: var(--muted); text-align: center; padding: 40px 0 }
 .rnav { display: flex; justify-content: space-between; gap: 8px }
 .credit { font-size: 11px; color: var(--muted); text-align: center; margin: 0 }
+
+/* Mode page : le mushaf de Médine, 15 lignes par page */
+.mushaf { display: grid; gap: 6px; border-radius: 16px; padding: 8px 10px; border: 1px solid var(--line); touch-action: pan-y }
+.mushaf.paper { background: var(--paper); color: var(--paper-ink); border-color: transparent }
+.mhead { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted) }
+.mushaf.paper .mhead, .mushaf.paper .mfoot { color: color-mix(in srgb, var(--paper-ink) 70%, transparent) }
+.mhead .ar-name { font-family: var(--arabic); font-size: 16px }
+.mpage { --mfs: 22px; font-family: "KFGQPC Hafs", var(--quran); display: grid; min-width: 0 }
+.mline { font-size: var(--mfs); line-height: 1.9; white-space: nowrap; min-width: 0 }
+.mline.text { display: flex; justify-content: space-between; overflow: hidden }
+.mline.text.center { justify-content: center; gap: .35em }
+.mline span { cursor: pointer; border-radius: 4px }
+.mline .aya { color: var(--saffron) }
+.mushaf.paper .mline .aya { color: #8A5A16 }
+.mline .mk { background: color-mix(in srgb, var(--saffron) 28%, transparent) }
+.mline.head { text-align: center; padding: 2px 0 }
+.mline.head .frame { display: inline-block; min-width: 70%; border: 1px solid var(--saffron); border-radius: 10px; background: var(--saffron-soft);
+  color: var(--saffron); font-family: var(--arabic); font-size: calc(var(--mfs) * .95); line-height: 1.7; cursor: default }
+.mline.bism-line { text-align: center }
+.immersive .top { display: none }
+.immersive .tools { top: 0; padding-top: calc(8px + env(safe-area-inset-top, 0px)) }
+.immersive main { padding-top: calc(8px + env(safe-area-inset-top, 0px)) }
+.immersive .tools { margin-top: 0 }
+.immersive .credit { display: none }
+.minfo { display: grid; justify-items: center; line-height: 1.2 }
+.minfo b { font-size: 15px; color: var(--ink) }
+.mushaf.paper .minfo b { color: var(--paper-ink) }
+.minfo small { font-size: 11px }
+.mfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums }
+.tools select.page-sel { flex: 0 0 84px; width: 84px }
+.verse .num.hafs { font-family: "KFGQPC Hafs"; color: var(--saffron) }
 
 /* Bouton flottant et fenêtre de réglages de lecture */
 .fab { position: fixed; z-index: 5; right: max(18px, calc((100vw - 560px) / 2 + 18px), env(safe-area-inset-right, 0px));

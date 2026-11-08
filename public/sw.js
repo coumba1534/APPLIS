@@ -1,9 +1,9 @@
 // Service worker : l'appli et le texte du Coran restent disponibles sans connexion.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `khatam-${VERSION}`;
 // Chemins relatifs à l'emplacement du service worker (racine du site ou sous-dossier).
 const ROOT = new URL('./', self.location).href;
-const PRECACHE = ['', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon.svg', 'data/ar.json'].map((p) => ROOT + p);
+const PRECACHE = ['', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon.svg', 'data/ar-hafs.json', 'data/mushaf.json'].map((p) => ROOT + p);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
