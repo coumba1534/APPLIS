@@ -29,6 +29,8 @@ export interface State {
   readerTarget: ReaderTarget | null;
   /** Dernier verset lu en haut de l'écran, en mode défilement (numéro absolu). */
   readerAbs: number | null;
+  /** L'astuce du mode focus a déjà été montrée. */
+  focusHintSeen: boolean;
   /** Apparence : 'auto' suit le réglage du téléphone. */
   theme: 'auto' | 'light' | 'dark';
   /** Heures de rappel personnalisées, clé `${programmeId}:${index}`. */
@@ -53,6 +55,7 @@ const initial: State = {
   catchPlan: null,
   bookmark: null,
   theme: 'auto',
+  focusHintSeen: false,
   lastTab: 'today',
   readerTarget: null,
   readerAbs: null,

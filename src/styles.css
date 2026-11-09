@@ -191,6 +191,15 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .immersive main { padding-top: calc(8px + env(safe-area-inset-top, 0px)) }
 .immersive .tools { margin-top: 0 }
 .immersive .credit { display: none }
+.mushaf { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none }
+/* Mode focus : seul le mushaf reste, avec le numéro de page en bas au milieu. */
+.focus .tools, .focus nav.tabs, .focus .mfoot .ghost, .focus .minfo small, .focus .credit { display: none !important }
+.focus main { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) }
+.focus .mushaf { border-color: transparent; padding-top: 4px }
+.focus .mfoot { justify-content: center }
+.focus .mushaf { min-height: calc(100vh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); grid-template-rows: 1fr auto }
+.focus .mpage { align-content: space-evenly }
+.focus .minfo b { font-size: 13px; font-weight: 400; color: var(--muted) }
 .minfo { display: grid; justify-items: center; line-height: 1.2 }
 .minfo b { font-size: 15px; color: var(--ink) }
 .mushaf.paper .minfo b { color: var(--paper-ink) }
@@ -207,6 +216,7 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .sheet { width: 100%; max-width: 560px; max-height: 72vh; overflow-y: auto; background: var(--surface); border-radius: 22px 22px 0 0;
   padding: 10px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
   display: grid; gap: 12px; animation: up .25s ease-out; box-shadow: 0 -10px 30px -12px rgba(0, 0, 0, .3) }
+.sheet { overscroll-behavior: contain }
 .sheet::before { content: ""; justify-self: center; width: 40px; height: 4px; border-radius: 9px; background: var(--line) }
 .sheet-head { display: flex; justify-content: space-between; align-items: center }
 .sheet-head b { font-family: var(--display); font-size: 17px }

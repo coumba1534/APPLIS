@@ -8,13 +8,35 @@ interface Props {
   markAbs: number;
   onMark: (abs: number) => void;
   paper: boolean;
+  /** Mode focus : seul le mushaf reste à l'écran. */
+  focus: boolean;
+  onToggleFocus: () => void;
 }
 
-export function PageView({ page, onPage, markAbs, onMark, paper }: Props) {
+export function PageView({ page, onPage, markAbs, onMark, paper, focus, onToggleFocus }: Props) {
   const [pages, setPages] = useState<MushafLine[][] | null>(null);
   const [error, setError] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const touch = useRef<{ x: number; y: number } | null>(null);
+  // Toucher brièvement la page : mode focus. Appui long sur un verset : marque-page.
+  const press = useRef<{ x: number; y: number; t: number; timer: number; long: boolean; moved: boolean } | null>(null);
+  const onPointerDown = (e: PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button')) { press.current = null; return; }
+    const target = (e.target as HTMLElement).closest<HTMLElement>('[data-abs]');
+    const p = { x: e.clientX, y: e.clientY, t: Date.now(), timer: 0, long: false, moved: false };
+    if (target) p.timer = window.setTimeout(() => { p.long = true; onMark(Number(target.dataset.abs)); navigator.vibrate?.(15); }, 550);
+    press.current = p;
+  };
+  const onPointerMove = (e: PointerEvent) => {
+    const p = press.current;
+    if (p && !p.moved && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) { p.moved = true; clearTimeout(p.timer); }
+  };
+  const onPointerUp = () => {
+    const p = press.current; press.current = null;
+    if (!p) return;
+    clearTimeout(p.timer);
+    if (!p.long && !p.moved && Date.now() - p.t < 400) onToggleFocus();
+  };
 
   useEffect(() => { loadMushaf().then(setPages).catch(() => setError(true)); }, []);
 
@@ -34,17 +56,19 @@ export function PageView({ page, onPage, markAbs, onMark, paper }: Props) {
       // 2. Hauteur : la page entière doit tenir au-dessus du pied de page et de la barre de navigation.
       const top = el.getBoundingClientRect().top;
       const nav = document.querySelector('nav.tabs')?.getBoundingClientRect().height ?? 80;
-      const available = window.innerHeight - top - nav - 64;
+      const footer = el.parentElement?.querySelector('.mfoot')?.getBoundingClientRect().height ?? 48;
+      const available = window.innerHeight - top - nav - footer - 28;
       if (el.scrollHeight > available && available > 200) size *= available / el.scrollHeight;
       el.style.setProperty('--mfs', `${Math.max(13, size)}px`);
     };
     fit();
+    const raf = requestAnimationFrame(fit); // après l'affichage ou le masquage des menus (mode focus)
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     document.fonts?.ready.then(fit);
     window.addEventListener('resize', fit);
-    return () => { ro.disconnect(); window.removeEventListener('resize', fit); };
-  }, [pages, page]);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); window.removeEventListener('resize', fit); };
+  }, [pages, page, focus]);
 
   if (error) return <p class="loading">Les pages n'ont pas pu être chargées. Vérifiez la connexion puis rouvrez cet onglet.</p>;
   if (!pages) return <p class="loading">Chargement du mushaf…</p>;
@@ -66,9 +90,9 @@ export function PageView({ page, onPage, markAbs, onMark, paper }: Props) {
           const here = abs;
           if (typeof tok === 'number') {
             abs++;
-            return <span key={ti} class={`aya ${here === markAbs ? 'mk' : ''}`} onClick={() => onMark(here)}>{'۝' + toArabicDigits(tok)}</span>;
+            return <span key={ti} data-abs={here} class={`aya ${here === markAbs ? 'mk' : ''}`}>{'۝' + toArabicDigits(tok)}</span>;
           }
-          return <span key={ti} class={here === markAbs ? 'mk' : undefined} onClick={() => onMark(here)}>{tok}</span>;
+          return <span key={ti} data-abs={here} class={here === markAbs ? 'mk' : undefined}>{tok}</span>;
         })}
       </div>
     );
@@ -79,7 +103,12 @@ export function PageView({ page, onPage, markAbs, onMark, paper }: Props) {
 
   return (
     <div
-      class={`mushaf ${paper ? 'paper' : ''}`}
+      class={`mushaf ${paper ? 'paper' : ''} ${focus ? 'focus' : ''}`}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => { if (press.current) clearTimeout(press.current.timer); press.current = null; }}
+      onContextMenu={(e) => e.preventDefault()}
       onTouchStart={(e) => { const t = e.touches[0]; touch.current = { x: t.clientX, y: t.clientY }; }}
       onTouchEnd={(e) => {
         const t0 = touch.current; touch.current = null;

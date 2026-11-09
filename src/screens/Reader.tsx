@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { useStore, update } from '../store';
 import {
   SURAHS, JUZ_NAMES, BISMILLAH, TOTAL_PAGES, juzVerses, surahVerses, posOf, pageOf, juzOf, absOf, pageFirstVerse,
@@ -43,6 +43,8 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
   const [fr, setFr] = useState<string[][] | null>(null);
   const [error, setError] = useState(false);
   const [panel, setPanel] = useState(false);
+  /** Mode focus (mode page) : on masque tout sauf le mushaf. */
+  const [focusMode, setFocusMode] = useState(false);
   /** Verset à afficher en haut de l'écran après un changement de mode (numéro absolu). */
   const [focus, setFocus] = useState<number | null>(() => (start === 'resume' ? s.readerAbs : null));
   const markAbs = s.bookmark ? absOf(s.bookmark.s, s.bookmark.n) : -1;
@@ -82,6 +84,7 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
   // Mode page : on masque le titre de l'écran pour laisser toute la place au mushaf.
   useEffect(() => {
     document.body.classList.toggle('immersive', pageMode);
+    if (!pageMode) setFocusMode(false);
     return () => document.body.classList.remove('immersive');
   }, [pageMode]);
 
@@ -147,6 +150,49 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
   };
   const setPrefs = (p: Partial<typeof prefs>) => update({ reader: { ...prefs, ...p } });
   const level = nearestLevel(prefs.size);
+  const toggleFocus = () => {
+    const on = !focusMode;
+    setFocusMode(on);
+    if (on) {
+      window.scrollTo(0, 0);
+      if (!s.focusHintSeen) { toast('Mode focus · touchez la page pour revenir'); update({ focusHintSeen: true }); }
+    }
+  };
+  useEffect(() => {
+    document.body.classList.toggle('focus', focusMode);
+    return () => document.body.classList.remove('focus');
+  }, [focusMode]);
+
+  // Fenêtre de réglages : on peut la fermer en la faisant glisser vers le bas.
+  const sheet = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; dy: number; t: number } | null>(null);
+  const onSheetTouchStart = (e: TouchEvent) => {
+    const el = sheet.current;
+    if (!el || el.scrollTop > 0) return; // on fait défiler le contenu, pas la fenêtre
+    drag.current = { y: e.touches[0].clientY, dy: 0, t: Date.now() };
+  };
+  const onSheetTouchMove = (e: TouchEvent) => {
+    const d = drag.current, el = sheet.current;
+    if (!d || !el) return;
+    d.dy = Math.max(0, e.touches[0].clientY - d.y);
+    if (d.dy > 0) {
+      e.preventDefault();
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${d.dy}px)`;
+    }
+  };
+  const onSheetTouchEnd = () => {
+    const d = drag.current, el = sheet.current;
+    drag.current = null;
+    if (!d || !el) return;
+    const fast = d.dy > 40 && d.dy / (Date.now() - d.t) > 0.6;
+    el.style.transition = 'transform .22s ease-out';
+    if (d.dy > el.offsetHeight * 0.25 || fast) {
+      el.style.transform = 'translateY(100%)';
+      window.setTimeout(() => setPanel(false), 200);
+    } else el.style.transform = '';
+  };
+
   const mark = (abs: number) => {
     const { s: si, n } = posOf(abs);
     update({ bookmark: { s: si, n } });
@@ -241,7 +287,8 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
 
       {panel && (
         <div class="sheet-backdrop" onClick={() => setPanel(false)}>
-          <div class="sheet" role="dialog" aria-label="Réglages de lecture" onClick={(e) => e.stopPropagation()}>
+          <div class="sheet" role="dialog" aria-label="Réglages de lecture" ref={sheet} onClick={(e) => e.stopPropagation()}
+            onTouchStart={onSheetTouchStart} onTouchMove={onSheetTouchMove} onTouchEnd={onSheetTouchEnd}>
             <div class="sheet-head">
               <b>Réglages de lecture</b>
               <button class="close" aria-label="Fermer" onClick={() => setPanel(false)}>✕</button>
@@ -298,7 +345,8 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
       )}
 
       {pageMode ? (
-        <PageView page={page} onPage={(p) => go({ mode: 'page', page: p })} markAbs={markAbs} onMark={mark} paper={prefs.paper} />
+        <PageView page={page} onPage={(p) => go({ mode: 'page', page: p })} markAbs={markAbs} onMark={mark} paper={prefs.paper}
+          focus={focusMode} onToggleFocus={toggleFocus} />
       ) : (
         <>
           <div class={`reader ${prefs.paper ? 'paper' : ''}`} style={style}>
