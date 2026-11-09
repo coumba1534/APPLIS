@@ -193,7 +193,10 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
     } else el.style.transform = '';
   };
 
+  const removeBookmark = () => { update({ bookmark: null }); toast('Marque-page retiré'); };
   const mark = (abs: number) => {
+    // Sur le verset déjà marqué, le même geste retire le marque-page.
+    if (abs === markAbs) { removeBookmark(); return; }
     const { s: si, n } = posOf(abs);
     update({ bookmark: { s: si, n } });
     toast(`Marque-page posé : ${SURAHS[si - 1][1]}, verset ${n} (page ${pageOf(abs)})`);
@@ -279,7 +282,12 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
             </div>
           )}
           {pageMode && <button class="ghost" aria-label="Réglages de lecture" onClick={() => setPanel(true)}>Aa</button>}
-          {s.bookmark && <span class="mark-info">Marque-page : {SURAHS[s.bookmark.s - 1][1]} {s.bookmark.n}</span>}
+          {s.bookmark && (
+            <span class="mark-info">
+              Marque-page : {SURAHS[s.bookmark.s - 1][1]} {s.bookmark.n}
+              <button class="mark-x" aria-label="Retirer le marque-page" onClick={removeBookmark}>✕</button>
+            </span>
+          )}
         </div>
       </div>
 

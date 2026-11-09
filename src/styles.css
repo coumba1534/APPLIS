@@ -135,7 +135,8 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden }
 .seg button { border: 0; background: transparent; color: var(--muted); font-weight: 700; font-size: 12px; padding: 7px 10px }
 .seg button[aria-pressed="true"] { background: var(--teal-soft); color: var(--teal) }
-.mark-info { font-size: 12px; color: var(--muted); margin-left: auto }
+.mark-info { font-size: 12px; color: var(--muted); margin-left: auto; display: inline-flex; align-items: center; gap: 4px }
+.mark-x { border: 0; background: var(--bg); color: var(--muted); width: 24px; height: 24px; border-radius: 50%; font-size: 11px; padding: 0; flex: 0 0 24px }
 .panel { border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 12px }
 .panel h3 { margin: 0; font-size: 13px; color: var(--muted) }
 .scripts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
