@@ -1,5 +1,5 @@
 // Service worker : l'appli et le texte du Coran restent disponibles sans connexion.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `khatam-${VERSION}`;
 // Chemins relatifs à l'emplacement du service worker (racine du site ou sous-dossier).
 const ROOT = new URL('./', self.location).href;

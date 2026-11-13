@@ -12,6 +12,34 @@ const JUZ_START: number[] = meta.J;
 const PAGE_START: number[] = meta.P;
 /** Numéro absolu du premier verset de chaque quart de hizb (240), plus une sentinelle. */
 const QUARTER_START: number[] = meta.H;
+/**
+ * Débuts des 240 quarts de hizb (numéro absolu), plus une sentinelle 6237.
+ * Un juz = 8 quarts : le début de chaque juz est aligné sur l'édition officielle de Médine.
+ */
+export const QUARTERS: number[] = (() => {
+  const q = [...QUARTER_START];
+  for (let k = 0; k < 30; k++) q[8 * k] = JUZ_START[k];
+  return q;
+})();
+/** Débuts des 604 pages (numéro absolu), plus une sentinelle 6237. */
+export const PAGE_STARTS: number[] = PAGE_START;
+export const JUZ_STARTS: number[] = JUZ_START;
+export const TOTAL_VERSES = 6236;
+
+/** Position fractionnaire dans le mushaf : 22,5 = au milieu de la page 22. */
+export function pagePos(abs: number): number {
+  if (abs > TOTAL_VERSES) return TOTAL_PAGES + 1;
+  const p = pageOf(abs);
+  const first = PAGE_START[p - 1], next = PAGE_START[p];
+  return p + (abs - first) / (next - first);
+}
+/** Nombre de pages (fractionnaire) occupées par les versets a à b inclus. */
+export const pagesBetween = (a: number, b: number) => pagePos(b + 1) - pagePos(a);
+/** Référence lisible d'un verset : « Al-Baqarah 2:142 ». */
+export function refText(abs: number) {
+  const { s, n } = posOf(abs);
+  return `${SURAHS[s - 1][1]} ${s}:${n}`;
+}
 
 export const TOTAL_PAGES = 604;
 export const BISMILLAH = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ';

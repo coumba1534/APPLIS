@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useStore, currentDay, update } from './store';
-import { absOf, juzOf } from './data/quran';
+import { absOf, juzOf, pageOf } from './data/quran';
+import { portion } from './data/khatam';
 import { Toast, icons } from './ui';
 import { Today, streak } from './screens/Today';
 import { Reader, ReaderTarget } from './screens/Reader';
@@ -9,6 +10,7 @@ import { Group } from './screens/Group';
 import { Reminders } from './screens/Reminders';
 import { Onboarding } from './screens/Onboarding';
 import { Finale } from './screens/Finale';
+import { NewKhatam } from './screens/NewKhatam';
 import { startReminders } from './device';
 import { isDark, toggleTheme } from './theme';
 
@@ -19,13 +21,15 @@ export function App() {
   const s = useStore();
   // À la réouverture, on revient sur le dernier onglet et la dernière lecture.
   const [tab, setTabState] = useState<Tab>(() => (s.onboarded && TABS.some(([id]) => id === s.lastTab) ? s.lastTab as Tab : 'today'));
-  const [target, setTargetState] = useState<ReaderTarget>(() => s.readerTarget ?? { mode: 'juz', juz: Math.min(Math.max(currentDay(s), 1), 30) });
+  const dayStartJuz = () => juzOf(portion(s.khatam.days, Math.min(Math.max(currentDay(s), 1), s.khatam.days))[0]);
+  const [target, setTargetState] = useState<ReaderTarget>(() => s.readerTarget ?? { mode: 'juz', juz: dayStartJuz() });
+  const [newOpen, setNewOpen] = useState(false);
   /** 'bookmark' : on ouvre Lire depuis « Reprendre au marque-page » ; 'resume' : on reprend où on en était. */
   const [start, setStart] = useState<'resume' | 'bookmark'>('resume');
   const setTab = (t: Tab) => { setTabState(t); update({ lastTab: t }); };
   const setTarget = (t: ReaderTarget) => { setTargetState(t); update({ readerTarget: t }); };
   const [readerTitle, setReaderTitle] = useState<[string, string]>(['Lire', '']);
-  const [finaleSeen, setFinaleSeen] = useState(s.done.length === 30);
+  const [finaleSeen, setFinaleSeen] = useState(s.done.length >= s.khatam.days);
 
   useEffect(() => { const id = startReminders(); return () => clearInterval(id); }, []);
   // Hauteur de l'en-tête, pour coller la barre d'outils de lecture juste en dessous.
@@ -37,22 +41,29 @@ export function App() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  useEffect(() => { if (s.done.length < 30) setFinaleSeen(false); }, [s.done.length]);
+  useEffect(() => { if (s.done.length < s.khatam.days) setFinaleSeen(false); }, [s.done.length, s.khatam.days]);
 
   const day = currentDay(s);
   const hello = `Assalamou alaykoum${s.name ? `, ${s.name}` : ''}`;
   const titles: Record<Tab, [string, string]> = {
-    today: [hello, day >= 1 && day <= 30 ? `Jour ${day} du Ramadan 1448` : 'Ramadan 1448'],
+    today: [hello, day >= 1 && day <= s.khatam.days ? (s.khatam.kind === 'ramadan' ? `Jour ${day} du Ramadan` : `Jour ${day} sur ${s.khatam.days}`) : s.khatam.name],
     read: readerTitle,
-    plan: ['Mon programme', 'Un juz par jour, à mon rythme'],
+    plan: ['Mon programme', 'Mon khatam, à mon rythme'],
     group: ['Mon groupe', 'On avance ensemble'],
     bell: ['Rappels', 'Notifications du khatam'],
   };
 
-  const openReader = () => {
-    const b = s.bookmark;
-    setTarget(b ? { mode: 'juz', juz: juzOf(absOf(b.s, b.n)) } : { mode: 'juz', juz: Math.min(Math.max(day, 1), 30) });
-    setStart('bookmark');
+  /** Ouvre Lire : au verset demandé (début de la portion du jour), sinon au marque-page. */
+  const openReader = (abs?: number) => {
+    if (abs !== undefined) {
+      update({ readerAbs: abs });
+      setTarget(s.reader.layout === 'page' ? { mode: 'page', page: pageOf(abs) } : { mode: 'juz', juz: juzOf(abs) });
+      setStart('resume');
+    } else {
+      const b = s.bookmark;
+      setTarget(b ? { mode: 'juz', juz: juzOf(absOf(b.s, b.n)) } : { mode: 'juz', juz: dayStartJuz() });
+      setStart('bookmark');
+    }
     setTab('read');
   };
 
@@ -71,9 +82,9 @@ export function App() {
         </div>
       </header>
       <main>
-        {tab === 'today' && <Today openReader={openReader} />}
+        {tab === 'today' && <Today openReader={openReader} onNewKhatam={() => setNewOpen(true)} />}
         {tab === 'read' && <Reader target={target} setTarget={setTarget} onTitle={setReaderTitle} start={start} />}
-        {tab === 'plan' && <Programme />}
+        {tab === 'plan' && <Programme onNewKhatam={() => setNewOpen(true)} />}
         {tab === 'group' && <Group />}
         {tab === 'bell' && <Reminders />}
       </main>
@@ -83,7 +94,8 @@ export function App() {
         ))}
       </nav>
       {!s.onboarded && <Onboarding onDone={() => setTab('today')} />}
-      {s.done.length === 30 && !finaleSeen && <Finale days={Math.min(day, 30)} onClose={() => setFinaleSeen(true)} />}
+      {s.done.length >= s.khatam.days && !finaleSeen && <Finale khatam={s.khatam} onClose={() => setFinaleSeen(true)} />}
+      {newOpen && <NewKhatam onClose={() => setNewOpen(false)} onStarted={() => { setTab('today'); window.scrollTo(0, 0); }} />}
       <Toast />
     </div>
   );

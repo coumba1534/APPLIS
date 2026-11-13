@@ -1,6 +1,7 @@
 // Installation sur l'écran d'accueil et notifications.
 import { getState, todayISO, update, currentDay } from './store';
 import { programmeById, sessionsFor } from './data/programmes';
+import { portion, juzTitle, pagesLabel } from './data/khatam';
 
 export const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 export const isStandalone = () =>
@@ -52,7 +53,8 @@ export function startReminders() {
   const tick = () => {
     const s = getState();
     const day = currentDay(s);
-    if (day < 1 || day > 30 || notificationPermission() !== 'granted') return;
+    const N = s.khatam.days;
+    if (day < 1 || day > N || s.khatam.finishedOn || notificationPermission() !== 'granted') return;
     const now = new Date();
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const date = todayISO();
@@ -61,14 +63,14 @@ export function startReminders() {
     const checked = new Set(s.sessions[day] ?? []);
     const due: { key: string; title: string; body: string }[] = [];
     if (s.reminders.sessions && !doneToday) {
-      for (const sess of sessionsFor(prog, day)) {
+      for (const sess of sessionsFor(prog, portion(N, day))) {
         const t = minutes(timeFor(prog.id, sess.index, sess.defaultTime));
         if (!checked.has(sess.index) && nowMin >= t && nowMin < t + 90)
-          due.push({ key: `s${sess.index}`, title: `${sess.label} · Juz ${day}`, body: `${sess.detail ? sess.detail + ', ' : ''}pages ${sess.from} à ${sess.to}. Bismillah !` });
+          due.push({ key: `s${sess.index}`, title: `${sess.label} · ${juzTitle(...portion(N, day)) ?? `Jour ${day}`}`, body: `${sess.detail ? sess.detail + ', ' : ''}pages ${sess.pageFrom} à ${sess.pageTo} (${pagesLabel(sess.pages)}). Bismillah !` });
       }
     }
     if (s.reminders.lateEvening && !doneToday && nowMin >= 21 * 60 && nowMin < 23 * 60)
-      due.push({ key: 'late', title: `Juz ${day} pas encore terminé`, body: 'Il reste encore un peu de temps ce soir, courage !' });
+      due.push({ key: 'late', title: `Jour ${day} pas encore terminé`, body: 'Il reste encore un peu de temps ce soir, courage !' });
     for (const d of due) {
       const id = `${date}:${d.key}`;
       if (s.shown.includes(id)) continue;

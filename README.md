@@ -4,12 +4,14 @@ Application web installable (PWA) pour faire un **khatam du Coran pendant le Ram
 
 ## Ce que fait l'appli (version 0.1)
 
-- **Aujourd'hui** : le juz du jour découpé en séances selon le programme choisi, à cocher ; rattrapage d'un juz manqué sur 1, 2 ou 4 jours ; jours d'affilée.
+- **Un khatam à la durée libre** : Ramadan (30 jours, 1 juz par jour), 1, 2 ou 3 mois, ou une durée personnalisée (de 1 à 365 jours, avec date de début et date de fin). Le Coran est découpé en parts égales, en **unités traditionnelles** : juz, hizb, ½ hizb, ¼ de hizb (jusqu'à 240 jours), puis en pages. Un seul khatam à la fois ; les anciens sont gardés dans un **historique** (terminé ou interrompu).
+- **Aujourd'hui** : la portion du jour découpée en séances selon le programme choisi, à cocher ; rattrapage d'un jour manqué sur 1, 2 ou 4 jours ; jours d'affilée ; fin du khatam.
+- **Programmes** : 4 programmes prédéfinis qui s'adaptent à la portion du jour, et un **programme personnalisé** (séances, parts en %, heures de rappel).
 - **Lire** : le Coran complet, par juz, par sourate ou par page.
   - **Mode Page** : les 604 pages du mushaf de Médine, 15 lignes par page comme le mushaf imprimé, dans l'écriture officielle du Complexe du Roi Fahd ; on tourne les pages en glissant.
   - **Mode Défilement** : verset par verset, avec la traduction française et 5 écritures au choix (Mushaf de Médine, Classique, Moderne posée, Ouest-africaine, Fine et aérée).
   - Un marque-page, dans les deux modes.
-- **Programme** : les 4 programmes de lecture et le tableau des 30 jours ; date de début du Ramadan réglable ; mode essai pour tester avant le Ramadan.
+- **Programme** : le khatam en cours, le choix du programme, le calendrier des jours et l'historique ; mode essai pour commencer avant la date prévue.
 - **Rappels** : un rappel par séance, à l'heure choisie.
 - **Fin du khatam** : écran de célébration avec des dou'a du Coran.
 - Fonctionne **hors connexion** une fois ouverte, et s'installe sur l'écran d'accueil (Android et iPhone).
@@ -47,7 +49,9 @@ Le dossier `dist/` contient alors le site complet, à héberger tel quel (par ex
 |---|---|
 | `src/screens/` | Les écrans : Aujourd'hui, Lire, Programme, Groupe, Rappels, premier lancement, fin du khatam |
 | `src/data/quran.ts` | Sourates, juz, hizb, pages du mushaf et chargement du texte |
-| `src/data/programmes.ts` | Les 4 programmes de lecture et le découpage du juz en séances |
+| `src/data/khatam.ts` | Le moteur du khatam : découpe du Coran en N jours (quarts de hizb ou pages) |
+| `src/data/programmes.ts` | Les programmes de lecture (prédéfinis et personnalisé) et le découpage de la portion en séances |
+| `src/screens/NewKhatam.tsx` | La fenêtre de création d'un khatam |
 | `src/store.ts` | La progression, enregistrée sur le téléphone |
 | `src/device.ts` | Installation et rappels |
 | `public/data/` | Texte arabe, pages du mushaf et traduction française du Coran |

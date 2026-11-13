@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
-import { useStore, update, currentDay } from '../store';
+import { useStore, update, currentDay, setReminderTime } from '../store';
 import { programmeById, sessionsFor } from '../data/programmes';
+import { portion, pagesLabel } from '../data/khatam';
 import { askNotifications, notificationPermission, notificationsSupported, notify, timeFor, isIOS, isStandalone } from '../device';
 import { toast } from '../ui';
 
@@ -8,8 +9,8 @@ export function Reminders() {
   const s = useStore();
   const [perm, setPerm] = useState(notificationPermission());
   const prog = programmeById(s.programmeId);
-  const day = Math.min(Math.max(currentDay(s), 1), 30);
-  const sessions = sessionsFor(prog, day);
+  const day = Math.min(Math.max(currentDay(s), 1), s.khatam.days);
+  const sessions = sessionsFor(prog, portion(s.khatam.days, day));
 
   return (
     <>
@@ -36,9 +37,9 @@ export function Reminders() {
       <div>
         {sessions.map((x) => (
           <div class="setting">
-            <div>{x.label}<small>{x.detail || `${x.pages} pages`}</small></div>
+            <div>{x.label}<small>{x.detail || pagesLabel(x.pages)}</small></div>
             <input type="time" aria-label={`Heure du rappel ${x.label}`} value={timeFor(prog.id, x.index, x.defaultTime)}
-              onChange={(e) => { const v = (e.target as HTMLInputElement).value; update({ reminderTimes: { ...s.reminderTimes, [`${prog.id}:${x.index}`]: v } }); toast(`Rappel réglé à ${v}`); }} />
+              onChange={(e) => { const v = (e.target as HTMLInputElement).value; setReminderTime(prog.id, x.index, v); toast(`Rappel réglé à ${v}`); }} />
           </div>
         ))}
         <div class="setting">
