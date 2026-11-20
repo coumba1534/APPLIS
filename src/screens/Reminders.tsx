@@ -4,6 +4,7 @@ import { programmeById, sessionsFor } from '../data/programmes';
 import { portion, pagesLabel } from '../data/khatam';
 import { askNotifications, notificationPermission, notificationsSupported, notify, timeFor, isIOS, isStandalone } from '../device';
 import { toast } from '../ui';
+import { APP_NAME } from '../brand';
 
 export function Reminders() {
   const s = useStore();
@@ -23,7 +24,7 @@ export function Reminders() {
         ) : perm === 'granted' ? (
           <>
             <p>Les rappels sont autorisés.</p>
-            <button class="ghost" style="justify-self:start" onClick={() => notify('Khatam entre sœurs', 'Ceci est un rappel de test. Bismillah !').then(() => toast('Rappel de test envoyé'))}>Envoyer un rappel de test</button>
+            <button class="ghost" style="justify-self:start" onClick={() => notify(APP_NAME, 'Ceci est un rappel de test. Bismillah !').then(() => toast('Rappel de test envoyé'))}>Envoyer un rappel de test</button>
           </>
         ) : perm === 'denied' ? (
           <p>Les notifications sont bloquées. Autorisez-les dans les réglages du téléphone pour cette appli.</p>

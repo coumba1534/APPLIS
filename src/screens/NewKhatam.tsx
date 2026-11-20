@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
-import { useStore, startKhatam, hasProgress, todayISO, addDays, daysBetween, formatDate, DEFAULT_RAMADAN_START } from '../store';
+import { useStore, startKhatam, hasProgress, todayISO, addDays, daysBetween, formatDate } from '../store';
+import { ramadanStart, ramadanVisible, useConfig } from '../config';
 import { portion, dayLabel, clampDays, MAX_DAYS, MIN_DAYS } from '../data/khatam';
 import { refText } from '../data/quran';
 import { toast } from '../ui';
@@ -14,6 +15,7 @@ const CHOICES: { id: Choice; title: string; days: number | null }[] = [
   { id: 'custom', title: 'Personnalisé', days: null },
 ];
 
+export type { Choice };
 export function khatamName(choice: Choice, days: number) {
   if (choice === 'ramadan') return 'Ramadan';
   if (choice === '30') return "Khatam d'un mois";
@@ -23,12 +25,16 @@ export function khatamName(choice: Choice, days: number) {
 }
 
 /** Fenêtre de création d'un khatam : durée (Ramadan, 1, 2, 3 mois ou personnalisée) et date de début. */
-export function NewKhatam({ onClose, onStarted }: { onClose: () => void; onStarted: () => void }) {
+export function NewKhatam({ onClose, onStarted, preselect }: { onClose: () => void; onStarted: () => void; preselect?: Choice }) {
   const s = useStore();
-  const [choice, setChoice] = useState<Choice>('ramadan');
-  const [start, setStart] = useState(s.khatam.kind === 'ramadan' ? (s.khatam.plannedStart ?? s.khatam.start) : DEFAULT_RAMADAN_START);
+  useConfig();
+  // Le Ramadan n'est proposé que lorsqu'il approche (ou si c'est activé à distance).
+  const choices = CHOICES.filter((c) => c.id !== 'ramadan' || ramadanVisible());
+  const first: Choice = preselect && choices.some((c) => c.id === preselect) ? preselect : choices[0].id;
+  const [choice, setChoice] = useState<Choice>(first);
+  const [start, setStart] = useState(first === 'ramadan' ? ramadanStart() : todayISO());
   const [customDays, setCustomDays] = useState(45);
-  const days = choice === 'custom' ? clampDays(customDays) : CHOICES.find((c) => c.id === choice)!.days!;
+  const days = choice === 'custom' ? clampDays(customDays) : choices.find((c) => c.id === choice)!.days!;
   const end = addDays(start, days - 1);
   const [a, b] = portion(days, 1);
   const inProgress = !s.khatam.finishedOn && hasProgress(s);
@@ -36,7 +42,7 @@ export function NewKhatam({ onClose, onStarted }: { onClose: () => void; onStart
   const pick = (c: Choice) => {
     setChoice(c);
     // Le Ramadan a sa date estimée ; les autres durées commencent aujourd'hui.
-    setStart(c === 'ramadan' ? DEFAULT_RAMADAN_START : todayISO());
+    setStart(c === 'ramadan' ? ramadanStart() : todayISO());
   };
 
   const go = () => {
@@ -53,7 +59,7 @@ export function NewKhatam({ onClose, onStarted }: { onClose: () => void; onStart
         <p>Choisissez la durée. Le Coran est découpé en parts égales, en unités traditionnelles (juz, hizb, ½ hizb).</p>
 
         <div class="choices" role="group" aria-label="Durée">
-          {CHOICES.map((c) => (
+          {choices.map((c) => (
             <button class="choice" aria-pressed={choice === c.id} onClick={() => pick(c.id)}>
               <b>{c.title}</b>
               <small>{c.days ? `${c.days} jours` : 'Vous choisissez'}</small>

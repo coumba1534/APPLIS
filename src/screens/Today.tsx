@@ -4,6 +4,7 @@ import { portion, portionPages, juzTitle, arabicName, pagesLabel, dayLabel, page
 import { TOTAL_PAGES } from '../data/quran';
 import { toast } from '../ui';
 import { InstallCard } from './InstallCard';
+import { RamadanBanner } from './RamadanBanner';
 
 export function streak(s: State) {
   const day = Math.min(currentDay(s), s.khatam.days);
@@ -31,7 +32,18 @@ function dayName(N: number, d: number) {
 
 const pagesRange = (a: number, b: number) => { const [x, y] = pageSpan(a, b); return x === y ? `p. ${x}` : `p. ${x}–${y}`; };
 
-export function Today({ openReader, onNewKhatam }: { openReader: (abs?: number) => void; onNewKhatam: () => void }) {
+type Props = { openReader: (abs?: number) => void; onNewKhatam: (choice?: 'ramadan') => void };
+
+export function Today(props: Props) {
+  return (
+    <>
+      <RamadanBanner onOpen={() => props.onNewKhatam('ramadan')} />
+      <TodayMain {...props} />
+    </>
+  );
+}
+
+function TodayMain({ openReader, onNewKhatam }: Props) {
   const s = useStore();
   const k = s.khatam;
   const N = k.days;
@@ -66,7 +78,7 @@ export function Today({ openReader, onNewKhatam }: { openReader: (abs?: number) 
         <div class="card">
           <h3>Khatam terminé, machallah ✓</h3>
           <p>{k.name} · {N} jours{k.finishedOn ? `, terminé le ${formatDate(k.finishedOn)}` : ''}. Qu'Allah l'accepte de vous.</p>
-          <button class="btn teal" onClick={onNewKhatam}>Commencer un nouveau khatam</button>
+          <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatam</button>
         </div>
         <button class="link" onClick={() => openReader()}>Relire le Coran</button>
         <InstallCard />
@@ -89,11 +101,17 @@ export function Today({ openReader, onNewKhatam }: { openReader: (abs?: number) 
   const whole = wholeJuz(a, b);
   const showRange = !whole;
 
+  // Lien de lecture : au début de la portion, puis à la prochaine séance une fois qu'on a commencé.
+  const next = done ? undefined : sessions.find((x) => !checked.has(x.index));
+  const resume = done ? { label: 'Relire la portion du jour', from: a }
+    : checked.size > 0 && next ? { label: `Continuer de lire · ${next.label}`, from: next.a }
+    : { label: 'Lire la portion du jour', from: a };
+
   const onSession = (index: number) => {
     const unchecking = done || checked.has(index);
     const completes = !unchecking && checked.size + 1 >= sessions.length;
     toggleSession(cur, index, sessions.length);
-    toast(completes ? `Machallah ! ${dayName(N, cur)[0].toUpperCase() + dayName(N, cur).slice(1)} terminé` : unchecking ? 'Séance décochée' : 'Séance validée, barakallahou fiki');
+    toast(completes ? `Machallah ! ${dayName(N, cur)[0].toUpperCase() + dayName(N, cur).slice(1)} terminé` : unchecking ? 'Séance décochée' : 'Séance validée, machallah !');
   };
 
   // Rattrapage : la portion du jour manqué est lue en `parts` morceaux égaux.
@@ -125,7 +143,7 @@ export function Today({ openReader, onNewKhatam }: { openReader: (abs?: number) 
           <h3>La période est terminée</h3>
           <p>{s.done.length} jour{s.done.length > 1 ? 's' : ''} lu{s.done.length > 1 ? 's' : ''} sur {N}. Vous pouvez encore rattraper les jours manquants, ou commencer un nouveau khatam.</p>
           {catchRow && <ul class="sessions plain">{catchRow}</ul>}
-          <button class="btn teal" onClick={onNewKhatam}>Commencer un nouveau khatam</button>
+          <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatam</button>
         </div>
       ) : (
         <div class="today">
@@ -159,7 +177,7 @@ export function Today({ openReader, onNewKhatam }: { openReader: (abs?: number) 
             {done ? 'Annuler « jour terminé »' : 'Jour terminé'}
           </button>
           <div class="links">
-            <button class="link" onClick={() => openReader(a)}>Lire la portion du jour</button>
+            <button class="link" onClick={() => openReader(resume.from)}>{resume.label}</button>
             {s.bookmark && <button class="link" onClick={() => openReader()}>Reprendre au marque-page</button>}
           </div>
         </div>

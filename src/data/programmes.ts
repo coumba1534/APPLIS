@@ -21,29 +21,29 @@ export interface Programme {
 
 export const BUILT_IN: Programme[] = [
   {
-    id: 'p1', name: 'Programme 1', forWho: 'Étudiantes, personnes occupées la journée',
+    id: 'p1', name: 'Matin et soir', forWho: 'Deux séances par jour : une après Fajr, une avant de dormir. Idéal si la journée est bien remplie.',
     sessions: [
       { label: 'Après Fajr', size: 'half1', time: '05:50' },
       { label: 'Avant de dormir', size: 'half2', time: '22:30' },
     ],
   },
   {
-    id: 'p2', name: 'Programme 2', forWho: "Femmes au foyer, indisponibles l'après-midi",
+    id: 'p2', name: 'Surtout le matin', forWho: 'Un court début après Fajr, puis le reste dans la matinée. Pour une journée libre le matin.',
     sessions: [
       { label: 'Après Fajr', size: 5, time: '05:50' },
-      { label: 'Dans la matinée', size: 15, time: '09:30' },
+      { label: 'Matinée', size: 15, time: '09:30' },
     ],
   },
   {
-    id: 'p2b', name: 'Programme 2 · variante', forWho: '5 pages après Fajr, puis matin et soir',
+    id: 'p2b', name: 'Réparti sur la journée', forWho: 'Après Fajr, en matinée, puis un peu avant de dormir.',
     sessions: [
       { label: 'Après Fajr', size: 5, time: '05:50' },
-      { label: 'Le matin', size: 10, time: '09:30' },
-      { label: 'Le soir avant de dormir', size: 5, time: '22:30' },
+      { label: 'Matinée', size: 10, time: '09:30' },
+      { label: 'Avant de dormir', size: 5, time: '22:30' },
     ],
   },
   {
-    id: 'p3', name: 'Programme 3', forWho: 'Emploi du temps flexible',
+    id: 'p3', name: 'Après chaque prière', forWho: 'Une petite part après chacune des 5 prières. Facile à tenir, même avec un emploi du temps variable.',
     sessions: [
       { label: 'Après Fajr', size: 4, time: '05:50' },
       { label: 'Après Dhuhr', size: 4, time: '14:00' },
@@ -54,22 +54,43 @@ export const BUILT_IN: Programme[] = [
   },
 ];
 
-/** Séance d'un programme personnalisé : part en pourcentage de la portion du jour. */
-export interface CustomSession { label: string; share: number; time: string }
+/**
+ * Séance d'un programme personnalisé : un moment de la journée et une heure de rappel.
+ * Les parts ne se règlent pas : la portion du jour est partagée à parts égales entre les séances.
+ */
+export interface CustomSession { label: string; time: string; /** ancien réglage, ignoré */ share?: number }
+
+/** Moments proposés pour une séance, avec une heure de rappel suggérée. */
+export const MOMENTS: { label: string; time: string }[] = [
+  { label: 'Après Fajr', time: '05:50' },
+  { label: 'Matin', time: '08:00' },
+  { label: 'Matinée', time: '09:30' },
+  { label: 'Midi', time: '12:30' },
+  { label: 'Après Dhuhr', time: '14:00' },
+  { label: 'Après-midi', time: '16:00' },
+  { label: 'Après Asr', time: '17:15' },
+  { label: 'Après Maghrib', time: '19:20' },
+  { label: 'Soir', time: '20:30' },
+  { label: 'Après Isha', time: '20:40' },
+  { label: 'Avant de dormir', time: '22:30' },
+];
 
 export const DEFAULT_CUSTOM: CustomSession[] = [
-  { label: 'Après Fajr', share: 50, time: '05:50' },
-  { label: 'Le soir', share: 50, time: '21:00' },
+  { label: 'Après Fajr', time: '05:50' },
+  { label: 'Avant de dormir', time: '22:30' },
 ];
 export const MAX_CUSTOM_SESSIONS = 8;
 
 export const CUSTOM_ID = 'custom';
 
+/** Range les séances dans l'ordre de la journée (la lecture suit l'ordre des heures). */
+export const sortByTime = (list: CustomSession[]) => [...list].sort((a, b) => a.time.localeCompare(b.time));
+
 export function customProgramme(): Programme {
   const list = getState().customProgramme?.length ? getState().customProgramme : DEFAULT_CUSTOM;
   return {
     id: CUSTOM_ID, name: 'Mon programme', forWho: 'Vos propres séances, à vos horaires',
-    sessions: list.map((x) => ({ label: x.label.trim() || 'Séance', size: Math.max(1, x.share), time: x.time })),
+    sessions: list.map((x) => ({ label: x.label.trim() || 'Séance', size: 1, time: x.time })),
   };
 }
 

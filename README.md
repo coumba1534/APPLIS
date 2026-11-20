@@ -6,7 +6,7 @@ Application web installable (PWA) pour faire un **khatam du Coran pendant le Ram
 
 - **Un khatam à la durée libre** : Ramadan (30 jours, 1 juz par jour), 1, 2 ou 3 mois, ou une durée personnalisée (de 1 à 365 jours, avec date de début et date de fin). Le Coran est découpé en parts égales, en **unités traditionnelles** : juz, hizb, ½ hizb, ¼ de hizb (jusqu'à 240 jours), puis en pages. Un seul khatam à la fois ; les anciens sont gardés dans un **historique** (terminé ou interrompu).
 - **Aujourd'hui** : la portion du jour découpée en séances selon le programme choisi, à cocher ; rattrapage d'un jour manqué sur 1, 2 ou 4 jours ; jours d'affilée ; fin du khatam.
-- **Programmes** : 4 programmes prédéfinis qui s'adaptent à la portion du jour, et un **programme personnalisé** (séances, parts en %, heures de rappel).
+- **Programmes** : 4 programmes prédéfinis (Matin et soir, Surtout le matin, Réparti sur la journée, Après chaque prière) qui s'adaptent à la portion du jour, et un **programme personnalisé** (le moment et l'heure de chaque séance ; les parts sont calculées automatiquement).
 - **Lire** : le Coran complet, par juz, par sourate ou par page.
   - **Mode Page** : les 604 pages du mushaf de Médine, 15 lignes par page comme le mushaf imprimé, dans l'écriture officielle du Complexe du Roi Fahd ; on tourne les pages en glissant.
   - **Mode Défilement** : verset par verset, avec la traduction française et 5 écritures au choix (Mushaf de Médine, Classique, Moderne posée, Ouest-africaine, Fine et aérée).
@@ -15,6 +15,28 @@ Application web installable (PWA) pour faire un **khatam du Coran pendant le Ram
 - **Rappels** : un rappel par séance, à l'heure choisie.
 - **Fin du khatam** : écran de célébration avec des dou'a du Coran.
 - Fonctionne **hors connexion** une fois ouverte, et s'installe sur l'écran d'accueil (Android et iPhone).
+
+### Le Ramadan apparaît quand il approche
+
+L'appli sert toute l'année. Les fonctions du Ramadan (le choix « Ramadan » pour créer un khatam, le bandeau « Le Ramadan approche ») n'apparaissent que dans les semaines qui précèdent, pendant, et peu après le Ramadan. Cela se règle dans `public/config.json`, sans mettre l'appli à jour :
+
+```json
+{
+  "ramadan": {
+    "start": "2027-02-08",
+    "showDaysBefore": 30,
+    "enabled": null
+  }
+}
+```
+
+| Réglage | Rôle |
+|---|---|
+| `start` | 1er jour du Ramadan. À corriger après l'annonce de la lune : les khatams du Ramadan pas encore commencés suivent la nouvelle date |
+| `showDaysBefore` | Nombre de jours avant le Ramadan où ses fonctions apparaissent |
+| `enabled` | `null` : automatique · `true` : toujours visible · `false` : toujours masqué |
+
+Pour le modifier : GitHub → `public/config.json` → icône crayon → changer la valeur → *Commit changes*. La mise en ligne prend environ une minute. L'appli relit ce fichier à chaque ouverture ; hors connexion, elle garde le dernier réglage connu.
 
 ### Pas encore disponible (étape 2, avec Firebase)
 

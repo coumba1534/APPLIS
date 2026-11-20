@@ -96,6 +96,15 @@ nav.tabs button[aria-current="page"] { color: var(--teal) }
 .opts button { border: 1px solid currentColor; background: var(--surface); border-radius: 10px; padding: 7px 10px; font-weight: 700; font-size: 13px; color: var(--late) }
 .catchup.on .opts button { color: var(--saffron) }
 
+/* Bandeau du Ramadan */
+.ramadan-banner { background: var(--saffron-soft); color: var(--ink); border-radius: 18px; padding: 16px; display: grid; gap: 10px }
+.rb-top { display: flex; gap: 12px; align-items: center }
+.rb-top b { font-family: var(--display); font-size: 17px; display: block }
+.rb-top small { color: var(--muted); font-size: 12px }
+.rb-moon { font-size: 30px; line-height: 1 }
+.ramadan-banner p { margin: 0; font-size: 14px }
+.rb-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap }
+
 /* Nouveau khatam, programme personnalisé, historique */
 .pill { font-size: 11px; font-weight: 700; border-radius: 99px; padding: 3px 9px; background: var(--teal-soft); color: var(--teal); white-space: nowrap }
 .pill.late { background: var(--late-soft); color: var(--late) }
@@ -108,12 +117,11 @@ nav.tabs button[aria-current="page"] { color: var(--teal) }
 .summary small { opacity: .85 }
 .note.warn { color: var(--late); background: var(--late-soft); border-radius: 12px; padding: 10px 12px }
 .overlay .row h1 { flex: 1 }
-.crow { display: grid; grid-template-columns: 1fr 74px 96px 32px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line) }
+.actions-row { display: flex; gap: 8px; flex-wrap: wrap }
+.crow { display: grid; grid-template-columns: minmax(0, 1fr) 124px 32px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line) }
 .crow:last-of-type { border-bottom: 0 }
-.crow input { min-width: 0; width: 100% }
-.crow .cname { grid-column: 1 / 2 }
-.cshare { display: flex; align-items: center; gap: 4px; font-weight: 700; color: var(--muted) }
-.cshare input { text-align: right }
+.crow input, .crow select { min-width: 0; width: 100% }
+.cother { grid-column: 1 / -1 }
 .rm-btn { border: 0; background: var(--bg); color: var(--muted); width: 32px; height: 32px; border-radius: 50%; font-size: 12px; padding: 0 }
 .rm-btn:disabled { opacity: .35 }
 .cpages { grid-column: 1 / -1; color: var(--muted); font-size: 12px; margin-top: -4px }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useStore, currentDay, update } from './store';
+import { useStore, currentDay, update, syncRamadanStart } from './store';
+import { loadConfig, useConfig } from './config';
 import { absOf, juzOf, pageOf } from './data/quran';
 import { portion } from './data/khatam';
 import { Toast, icons } from './ui';
@@ -23,7 +24,8 @@ export function App() {
   const [tab, setTabState] = useState<Tab>(() => (s.onboarded && TABS.some(([id]) => id === s.lastTab) ? s.lastTab as Tab : 'today'));
   const dayStartJuz = () => juzOf(portion(s.khatam.days, Math.min(Math.max(currentDay(s), 1), s.khatam.days))[0]);
   const [target, setTargetState] = useState<ReaderTarget>(() => s.readerTarget ?? { mode: 'juz', juz: dayStartJuz() });
-  const [newOpen, setNewOpen] = useState(false);
+  const [newOpen, setNewOpen] = useState<null | 'any' | 'ramadan'>(null);
+  const config = useConfig();
   /** 'bookmark' : on ouvre Lire depuis « Reprendre au marque-page » ; 'resume' : on reprend où on en était. */
   const [start, setStart] = useState<'resume' | 'bookmark'>('resume');
   const setTab = (t: Tab) => { setTabState(t); update({ lastTab: t }); };
@@ -32,6 +34,15 @@ export function App() {
   const [finaleSeen, setFinaleSeen] = useState(s.done.length >= s.khatam.days);
 
   useEffect(() => { const id = startReminders(); return () => clearInterval(id); }, []);
+  // Réglages à distance : à l'ouverture et chaque fois qu'on revient dans l'appli.
+  useEffect(() => {
+    loadConfig();
+    const onVisible = () => { if (document.visibilityState === 'visible') loadConfig(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+  // La date du Ramadan peut changer (annonce de la lune) : les khatams concernés suivent.
+  useEffect(() => { syncRamadanStart(); }, [config.ramadan.start]);
   // Hauteur de l'en-tête, pour coller la barre d'outils de lecture juste en dessous.
   const header = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -82,9 +93,9 @@ export function App() {
         </div>
       </header>
       <main>
-        {tab === 'today' && <Today openReader={openReader} onNewKhatam={() => setNewOpen(true)} />}
+        {tab === 'today' && <Today openReader={openReader} onNewKhatam={(c) => setNewOpen(c ?? 'any')} />}
         {tab === 'read' && <Reader target={target} setTarget={setTarget} onTitle={setReaderTitle} start={start} />}
-        {tab === 'plan' && <Programme onNewKhatam={() => setNewOpen(true)} />}
+        {tab === 'plan' && <Programme onNewKhatam={() => setNewOpen('any')} />}
         {tab === 'group' && <Group />}
         {tab === 'bell' && <Reminders />}
       </main>
@@ -95,7 +106,7 @@ export function App() {
       </nav>
       {!s.onboarded && <Onboarding onDone={() => setTab('today')} />}
       {s.done.length >= s.khatam.days && !finaleSeen && <Finale khatam={s.khatam} onClose={() => setFinaleSeen(true)} />}
-      {newOpen && <NewKhatam onClose={() => setNewOpen(false)} onStarted={() => { setTab('today'); window.scrollTo(0, 0); }} />}
+      {newOpen && <NewKhatam preselect={newOpen === 'ramadan' ? 'ramadan' : undefined} onClose={() => setNewOpen(null)} onStarted={() => { setTab('today'); window.scrollTo(0, 0); }} />}
       <Toast />
     </div>
   );

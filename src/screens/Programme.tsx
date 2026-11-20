@@ -1,5 +1,6 @@
-import { useStore, update, currentDay, endDate, formatDate, setKhatamStart, stopTrial, DEFAULT_RAMADAN_START } from '../store';
-import { allProgrammes, sessionsFor, DEFAULT_CUSTOM, CUSTOM_ID, MAX_CUSTOM_SESSIONS, customProgramme, CustomSession } from '../data/programmes';
+import { useStore, update, currentDay, endDate, formatDate, setKhatamStart, stopTrial } from '../store';
+import { ramadanStart } from '../config';
+import { allProgrammes, sessionsFor, DEFAULT_CUSTOM, CUSTOM_ID, MAX_CUSTOM_SESSIONS, MOMENTS, customProgramme, sortByTime, CustomSession } from '../data/programmes';
 import { portion, dayLabel, pagesLabel, portionPages, pageSpan, juzTitle } from '../data/khatam';
 import { toast } from '../ui';
 
@@ -34,8 +35,8 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
           <div class="setting"><div>Mode essai<small>Commencé aujourd'hui, prévu le {formatDate(k.plannedStart!)}</small></div>
             <button class="ghost" onClick={() => { stopTrial(); toast('Retour à la date prévue'); }}>Arrêter l'essai</button></div>
         )}
-        {k.kind === 'ramadan' && k.start !== DEFAULT_RAMADAN_START && !trial && (
-          <button class="link" onClick={() => { setKhatamStart(DEFAULT_RAMADAN_START); toast('Date estimée remise'); }}>Remettre la date estimée</button>
+        {k.kind === 'ramadan' && k.start !== ramadanStart() && !trial && (
+          <button class="link" onClick={() => { setKhatamStart(ramadanStart()); toast('Date annoncée remise'); }}>Remettre la date annoncée</button>
         )}
         <button class="btn teal" onClick={onNewKhatam}>Nouveau khatam</button>
         <p class="note">Un seul khatam à la fois. Le khatam en cours est gardé dans l'historique.</p>
@@ -83,43 +84,46 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
   );
 }
 
-/** Éditeur du programme personnalisé : des séances, chacune avec sa part de la portion et son heure de rappel. */
+/** Éditeur du programme personnalisé : un moment et une heure par séance. Les parts sont calculées. */
 function CustomEditor({ sample }: { sample: [number, number] }) {
   const s = useStore();
   const list: CustomSession[] = s.customProgramme.length ? s.customProgramme : DEFAULT_CUSTOM;
-  const total = list.reduce((t, x) => t + x.share, 0);
-  const set = (next: CustomSession[]) => update({ customProgramme: next });
+  const set = (next: CustomSession[]) => update({ customProgramme: sortByTime(next) });
   const patch = (i: number, p: Partial<CustomSession>) => set(list.map((x, j) => (j === i ? { ...x, ...p } : x)));
-  const equalize = () => {
-    const n = list.length, each = Math.floor(100 / n);
-    set(list.map((x, i) => ({ ...x, share: i === n - 1 ? 100 - each * (n - 1) : each })));
-    toast('Parts réparties également');
-  };
   const sizes = sessionsFor(customProgramme(), sample);
+  const known = (label: string) => MOMENTS.some((m) => m.label === label);
   return (
     <div class="card">
       <h3>Mes séances</h3>
-      <p class="note">Donnez un nom, une part de la portion du jour et une heure de rappel à chaque séance.</p>
+      <p class="note">Choisissez le moment et l'heure de chaque séance. La portion du jour est partagée automatiquement à parts égales, selon la durée de votre khatam.</p>
       {list.map((x, i) => (
         <div class="crow" key={i}>
-          <input type="text" class="cname" value={x.label} maxLength={32} aria-label={`Nom de la séance ${i + 1}`} placeholder="Nom"
-            onInput={(e) => patch(i, { label: (e.target as HTMLInputElement).value })} />
-          <label class="cshare"><input type="number" min={1} max={100} value={x.share} aria-label={`Part de la séance ${i + 1} en pourcentage`}
-            onInput={(e) => { const v = parseInt((e.target as HTMLInputElement).value, 10); if (v > 0) patch(i, { share: Math.min(100, v) }); }} />%</label>
+          <select class="cname" aria-label={`Moment de la séance ${i + 1}`} value={known(x.label) ? x.label : '__autre'}
+            onChange={(e) => {
+              const v = (e.target as HTMLSelectElement).value;
+              if (v === '__autre') patch(i, { label: 'Ma séance' });
+              else patch(i, { label: v, time: MOMENTS.find((m) => m.label === v)!.time });
+            }}>
+            {MOMENTS.map((m) => <option value={m.label}>{m.label}</option>)}
+            <option value="__autre">Autre…</option>
+          </select>
           <input type="time" value={x.time} aria-label={`Heure de rappel de la séance ${i + 1}`} onChange={(e) => patch(i, { time: (e.target as HTMLInputElement).value })} />
           <button class="rm-btn" aria-label={`Retirer la séance ${i + 1}`} disabled={list.length <= 1} onClick={() => set(list.filter((_, j) => j !== i))}>✕</button>
-          <small class="cpages">{sizes[i] ? pagesLabel(sizes[i].pages) : ''}</small>
+          {!known(x.label) && (
+            <input type="text" class="cother" value={x.label} maxLength={32} aria-label={`Nom de la séance ${i + 1}`} placeholder="Nom de la séance"
+              onInput={(e) => patch(i, { label: (e.target as HTMLInputElement).value })} />
+          )}
+          <small class="cpages">{sizes[i] ? `${pagesLabel(sizes[i].pages)} · ${Math.round(100 / list.length)} % de la portion` : ''}</small>
         </div>
       ))}
-      <div class="row">
-        <span class={`pill ${total === 100 ? '' : 'late'}`}>Total : {total} %</span>
-        <span class="note">{total === 100 ? 'Parfait' : 'Ajusté automatiquement à 100 %'}</span>
+      <div class="actions-row">
+        <button class="ghost" disabled={list.length >= MAX_CUSTOM_SESSIONS} onClick={() => {
+          const used = new Set(list.map((x) => x.label));
+          const m = MOMENTS.find((x) => !used.has(x.label)) ?? MOMENTS[MOMENTS.length - 1];
+          set([...list, { label: m.label, time: m.time }]);
+        }}>+ Ajouter une séance</button>
       </div>
-      <div class="opts" style="margin-top:2px">
-        <button class="ghost" disabled={list.length >= MAX_CUSTOM_SESSIONS} onClick={() => set([...list, { label: `Séance ${list.length + 1}`, share: Math.max(5, Math.round(100 / (list.length + 1))), time: '12:00' }])}>+ Ajouter une séance</button>
-        <button class="ghost" onClick={equalize}>Répartir également</button>
-      </div>
+      <p class="note">Les séances sont rangées dans l'ordre de la journée.</p>
     </div>
   );
 }
-

@@ -1,5 +1,7 @@
 import { useState } from 'preact/hooks';
-import { update, getState, newId, todayISO, DEFAULT_RAMADAN_START } from '../store';
+import { update, getState, newId, todayISO } from '../store';
+import { ramadanStart, ramadanVisible } from '../config';
+import { APP_NAME } from '../brand';
 import { allProgrammes, sessionsFor } from '../data/programmes';
 import { portion, dayLabel, pagesLabel } from '../data/khatam';
 import { khatamName } from './NewKhatam';
@@ -11,7 +13,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState(init.name);
   const [prog, setProg] = useState(init.programmeId);
   const [code, setCode] = useState(init.groupCode);
-  const [dur, setDur] = useState<'ramadan' | '30' | '60' | '90'>(init.khatam.kind === 'ramadan' ? 'ramadan' : '30');
+  const showRamadan = ramadanVisible();
+  const [dur, setDur] = useState<'ramadan' | '30' | '60' | '90'>(showRamadan ? 'ramadan' : '30');
   const days = dur === 'ramadan' ? 30 : Number(dur);
   const progs = allProgrammes().filter((p) => p.id !== 'custom');
   const chosen = progs.find((p) => p.id === prog) ?? progs[0];
@@ -20,7 +23,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const finish = async (askNotif: boolean) => {
     update({
       onboarded: true, name: name.trim(), programmeId: prog, groupCode: code.trim().toUpperCase(),
-      khatam: { id: newId(), kind: dur === 'ramadan' ? 'ramadan' : 'custom', name: khatamName(dur, days), days, start: dur === 'ramadan' ? DEFAULT_RAMADAN_START : todayISO() },
+      khatam: { id: newId(), kind: dur === 'ramadan' ? 'ramadan' : 'custom', name: khatamName(dur, days), days, start: dur === 'ramadan' ? ramadanStart() : todayISO(), ...(dur === 'ramadan' ? { followsConfig: true } : {}) },
       done: [], sessions: {}, catchPlan: null,
     });
     if (askNotif && notificationsSupported()) await askNotifications();
@@ -30,13 +33,13 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const bodies = [
     <>
       <h1>Assalamou alaykoum 🌙</h1>
-      <p>Bienvenue dans Khatam entre sœurs : un juz par jour pendant le Ramadan, à votre rythme, avec vos sœurs.</p>
-      <label class="field">Votre prénom<input type="text" value={name} placeholder="Ex. Aminata" autocomplete="given-name" onInput={(e) => setName((e.target as HTMLInputElement).value)} /></label>
+      <p>Bienvenue dans {APP_NAME} : lisez le Coran en entier, à votre rythme, et ensemble.</p>
+      <label class="field">Votre prénom<input type="text" value={name} placeholder="Ex. Aminata ou Moussa" autocomplete="given-name" onInput={(e) => setName((e.target as HTMLInputElement).value)} /></label>
     </>,
     <>
       <h1>Quelle durée pour votre khatam ?</h1>
       <p>Le Coran est découpé en parts égales, une par jour. Vous pourrez aussi choisir une durée personnalisée dans l'onglet Programme.</p>
-      {([['ramadan', 'Ramadan', 30], ['30', '1 mois', 30], ['60', '2 mois', 60], ['90', '3 mois', 90]] as const).map(([id, title, d]) => (
+      {([['ramadan', 'Ramadan', 30], ['30', '1 mois', 30], ['60', '2 mois', 60], ['90', '3 mois', 90]] as const).filter(([id]) => id !== 'ramadan' || showRamadan).map(([id, title, d]) => (
         <button class="choice" aria-pressed={dur === id} onClick={() => setDur(id)}>
           <b>{title} · {d} jours</b><small>{dayLabel(d)}</small>
         </button>
@@ -53,7 +56,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     </>,
     <>
       <h1>Rejoindre votre groupe</h1>
-      <p>Entrez le code d'invitation envoyé par l'administratrice, par exemple sur WhatsApp.</p>
+      <p>Entrez le code d'invitation reçu de la personne qui gère le groupe, par exemple sur WhatsApp.</p>
       <label class="field">Code d'invitation<input type="text" value={code} placeholder="Ex. BA-1448" autocapitalize="characters" onInput={(e) => setCode((e.target as HTMLInputElement).value)} /></label>
       <p style="font-size:13px">Vous n'avez pas encore de code ? Continuez : vous pourrez l'ajouter plus tard dans l'onglet Groupe.</p>
     </>,

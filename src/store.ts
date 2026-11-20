@@ -4,6 +4,8 @@ import { useEffect, useState } from 'preact/hooks';
 import type { ReaderTarget } from './screens/Reader';
 import { clampDays, portion, portionPages } from './data/khatam';
 import type { CustomSession } from './data/programmes';
+import { addDays, daysBetween, todayISO } from './dates';
+import { ramadanStart } from './config';
 
 /**
  * Rattrapage d'un jour manqué : la portion de ce jour est lue en `parts` morceaux égaux,
@@ -26,6 +28,8 @@ export interface Khatam {
   plannedStart?: string;
   /** Date à laquelle le dernier jour a été validé. */
   finishedOn?: string;
+  /** Ramadan : le début suit la date annoncée à distance, tant qu'on ne l'a pas modifié soi-même. */
+  followsConfig?: boolean;
 }
 
 export interface HistoryItem {
@@ -48,6 +52,8 @@ export interface State {
   programmeId: string;
   /** Séances du programme personnalisé. */
   customProgramme: CustomSession[];
+  /** Date du Ramadan pour laquelle on a masqué le bandeau « Le Ramadan approche ». */
+  hideRamadanBanner: string | null;
   /** Le khatam en cours (un seul à la fois). */
   khatam: Khatam;
   history: HistoryItem[];
@@ -75,14 +81,15 @@ export interface State {
   shown: string[];
 }
 
-/** 1er jour du Ramadan 1448 (estimation, à ajuster selon l'annonce de la lune). */
-export const DEFAULT_RAMADAN_START = '2027-02-08';
-
 export const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
-export function ramadanKhatam(start = DEFAULT_RAMADAN_START): Khatam {
-  return { id: newId(), kind: 'ramadan', name: 'Ramadan', start, days: 30 };
+/** Khatam du Ramadan : 30 jours, 1 juz par jour. Par défaut, il suit la date annoncée à distance. */
+export function ramadanKhatam(start = ramadanStart()): Khatam {
+  return { id: newId(), kind: 'ramadan', name: 'Ramadan', start, days: 30, followsConfig: start === ramadanStart() };
 }
+
+/** Khatam d'un mois qui commence aujourd'hui : le point de départ avant le premier choix. */
+export const monthKhatam = (): Khatam => ({ id: newId(), kind: 'custom', name: "Khatam d'un mois", start: todayISO(), days: 30 });
 
 const initial: State = {
   version: 2,
@@ -91,8 +98,9 @@ const initial: State = {
   groupCode: '',
   programmeId: 'p1',
   customProgramme: [],
-  khatam: ramadanKhatam(),
+  khatam: monthKhatam(),
   history: [],
+  hideRamadanBanner: null,
   done: [],
   sessions: {},
   catchPlan: null,
@@ -112,8 +120,8 @@ const KEY = 'khatam-entre-soeurs';
 
 /** Reprend les données de la version 1 (Ramadan seulement, 30 juz). */
 function migrate(old: Record<string, unknown>): State {
-  const start = (old.trialStart as string | null) ?? (old.ramadanStart as string | undefined) ?? DEFAULT_RAMADAN_START;
-  const khatam: Khatam = { ...ramadanKhatam(start), ...(old.trialStart ? { plannedStart: (old.ramadanStart as string) ?? DEFAULT_RAMADAN_START } : {}) };
+  const start = (old.trialStart as string | null) ?? (old.ramadanStart as string | undefined) ?? ramadanStart();
+  const khatam: Khatam = { ...ramadanKhatam(start), ...(old.trialStart ? { plannedStart: (old.ramadanStart as string) ?? ramadanStart() } : {}) };
   let catchPlan: CatchPlan | null = null;
   const cp = old.catchPlan as { juz: number; perDay: number; read: number; lastDay: string | null } | null | undefined;
   if (cp && cp.juz) {
@@ -160,24 +168,7 @@ export function useStore(): State {
 
 // ---- Calendrier ----
 
-export const todayISO = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-const dayNumber = (iso: string) => {
-  const [y, m, d] = iso.split('-').map(Number);
-  return Math.round(Date.UTC(y, m - 1, d) / 86400000);
-};
-
-export function addDays(iso: string, n: number) {
-  const [y, m, d] = iso.split('-').map(Number);
-  const t = new Date(Date.UTC(y, m - 1, d + n));
-  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
-}
-
-/** Nombre de jours entre deux dates (b - a). */
-export const daysBetween = (a: string, b: string) => dayNumber(b) - dayNumber(a);
+export { todayISO, addDays, daysBetween };
 
 /** Dernier jour d'un khatam. */
 export const endDate = (k: Khatam) => addDays(k.start, k.days - 1);
@@ -259,7 +250,7 @@ export function startKhatam(k: Omit<Khatam, 'id'>) {
     }
     return {
       history,
-      khatam: { ...k, id: newId(), days: clampDays(k.days) },
+      khatam: { ...k, id: newId(), days: clampDays(k.days), followsConfig: k.kind === 'ramadan' && k.start === ramadanStart() },
       done: [], sessions: {}, catchPlan: null, shown: [],
     };
   });
@@ -267,7 +258,7 @@ export function startKhatam(k: Omit<Khatam, 'id'>) {
 
 /** Change les réglages du khatam en cours sans toucher à la progression (date de début). */
 export function setKhatamStart(start: string) {
-  update((s) => ({ khatam: { ...s.khatam, start, plannedStart: undefined } }));
+  update((s) => ({ khatam: { ...s.khatam, start, plannedStart: undefined, followsConfig: false } }));
 }
 
 /** Mode essai : commence aujourd'hui, en gardant la date prévue. */
@@ -288,4 +279,16 @@ export function setReminderTime(programmeId: string, index: number, time: string
     }
     return { reminderTimes: { ...s.reminderTimes, [`${programmeId}:${index}`]: time } };
   });
+}
+
+/**
+ * Quand la date du Ramadan change à distance (annonce de la lune), les khatams du Ramadan
+ * qui n'ont pas encore commencé et dont la date n'a pas été modifiée suivent la nouvelle date.
+ */
+export function syncRamadanStart() {
+  const s = state, k = s.khatam;
+  const target = ramadanStart();
+  if (k.kind !== 'ramadan' || !k.followsConfig || k.plannedStart || k.start === target) return;
+  if (daysBetween(todayISO(), k.start) <= 0) return; // déjà commencé : on ne change plus rien
+  update({ khatam: { ...k, start: target } });
 }

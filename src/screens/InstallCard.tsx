@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import { APP_SHORT_NAME } from '../brand';
 import { isIOS, isStandalone, canPromptInstall, onInstallAvailable, promptInstall } from '../device';
 
 /** Explique comment ajouter l'appli à l'écran d'accueil, tant qu'elle ne l'est pas. */
@@ -24,7 +25,7 @@ export function InstallCard() {
     <div class="install">
       <b>Installer l'appli sur votre téléphone</b>
       {canPromptInstall()
-        ? <button class="btn" onClick={() => promptInstall().then(() => refresh((x) => x + 1))}>Installer Khatam Sœurs</button>
+        ? <button class="btn" onClick={() => promptInstall().then(() => refresh((x) => x + 1))}>Installer {APP_SHORT_NAME}</button>
         : <span>Dans le menu du navigateur (⋮), choisissez <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b>.</span>}
     </div>
   );

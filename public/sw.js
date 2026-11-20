@@ -1,5 +1,5 @@
 // Service worker : l'appli et le texte du Coran restent disponibles sans connexion.
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = `khatam-${VERSION}`;
 // Chemins relatifs à l'emplacement du service worker (racine du site ou sous-dossier).
 const ROOT = new URL('./', self.location).href;
@@ -23,6 +23,15 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (url.origin !== self.location.origin && !isFont) return;
+
+  // Réglages à distance : toujours le plus récent, le cache sert seulement hors connexion.
+  if (url.origin === self.location.origin && url.pathname.endsWith('/config.json')) {
+    event.respondWith(
+      fetch(req).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return res; })
+        .catch(() => caches.match(req)),
+    );
+    return;
+  }
 
   // Pages : réseau d'abord (pour recevoir les mises à jour), cache si hors ligne.
   if (req.mode === 'navigate') {
