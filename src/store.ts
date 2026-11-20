@@ -42,6 +42,8 @@ export interface HistoryItem {
   /** Date de fin (khatam terminé) ou d'arrêt. */
   end: string;
   status: 'done' | 'stopped';
+  /** Progression au moment de l'arrêt, pour pouvoir reprendre un khatam interrompu. */
+  progress?: { done: number[]; sessions: Record<string, number[]>; catchPlan: CatchPlan | null };
 }
 
 export interface State {
@@ -240,14 +242,56 @@ export function readCatchUp(): boolean {
 /** Vrai si le khatam en cours a déjà un début de lecture (un jour terminé ou une séance cochée). */
 export const hasProgress = (s: State = state) => s.done.length > 0 || Object.values(s.sessions).some((x) => x.length > 0);
 
+/** Le khatam en cours, tel qu'on le range dans l'historique s'il est interrompu (null s'il n'a pas commencé ou s'il est terminé). */
+function interruptedEntry(s: State): HistoryItem | null {
+  const cur = s.khatam;
+  if (cur.finishedOn || !hasProgress(s)) return null;
+  return {
+    id: cur.id, name: cur.name, kind: cur.kind, start: cur.start, days: cur.days, doneDays: s.done.length, end: todayISO(), status: 'stopped',
+    progress: { done: s.done, sessions: s.sessions, catchPlan: s.catchPlan },
+  };
+}
+
+/** Premier jour pas encore lu d'un khatam interrompu : c'est là qu'on reprend. */
+export function resumeDay(item: HistoryItem) {
+  const done = new Set(item.progress?.done ?? []);
+  let d = 1;
+  while (done.has(d) && d < item.days) d++;
+  return d;
+}
+
+/**
+ * Reprend un khatam interrompu : il redevient le khatam en cours, avec sa progression.
+ * Le calendrier est décalé pour qu'aujourd'hui tombe sur le premier jour pas encore lu.
+ * Le khatam en cours, s'il a commencé, passe dans l'historique comme interrompu.
+ */
+export function resumeKhatam(id: string) {
+  update((s) => {
+    const item = s.history.find((h) => h.id === id && h.status === 'stopped');
+    if (!item) return {};
+    const stopped = interruptedEntry(s);
+    const history = [...(stopped ? [stopped] : []), ...s.history.filter((h) => h.id !== id)];
+    return {
+      history,
+      khatam: { id: item.id, kind: item.kind, name: item.name, days: item.days, start: addDays(todayISO(), -(resumeDay(item) - 1)), followsConfig: false },
+      done: item.progress?.done ?? [],
+      sessions: item.progress?.sessions ?? {},
+      catchPlan: item.progress?.catchPlan ?? null,
+      shown: [],
+    };
+  });
+}
+
+/** Retire un khatam de l'historique. */
+export function deleteHistoryItem(id: string) {
+  update((s) => ({ history: s.history.filter((h) => h.id !== id) }));
+}
+
 /** Commence un nouveau khatam. Le khatam en cours, s'il n'est pas terminé, est gardé dans l'historique comme interrompu. */
 export function startKhatam(k: Omit<Khatam, 'id'>) {
   update((s) => {
-    let history = s.history;
-    const cur = s.khatam;
-    if (!cur.finishedOn && hasProgress(s)) {
-      history = [{ id: cur.id, name: cur.name, kind: cur.kind, start: cur.start, days: cur.days, doneDays: s.done.length, end: todayISO(), status: 'stopped' }, ...history];
-    }
+    const stopped = interruptedEntry(s);
+    const history = stopped ? [stopped, ...s.history] : s.history;
     return {
       history,
       khatam: { ...k, id: newId(), days: clampDays(k.days), followsConfig: k.kind === 'ramadan' && k.start === ramadanStart() },

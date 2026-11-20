@@ -4,7 +4,7 @@ Application web installable (PWA) pour faire un **khatam du Coran pendant le Ram
 
 ## Ce que fait l'appli (version 0.1)
 
-- **Un khatam à la durée libre** : Ramadan (30 jours, 1 juz par jour), 1, 2 ou 3 mois, ou une durée personnalisée (de 1 à 365 jours, avec date de début et date de fin). Le Coran est découpé en parts égales, en **unités traditionnelles** : juz, hizb, ½ hizb, ¼ de hizb (jusqu'à 240 jours), puis en pages. Un seul khatam à la fois ; les anciens sont gardés dans un **historique** (terminé ou interrompu).
+- **Un khatam à la durée libre** : Ramadan (30 jours, 1 juz par jour), 1, 2 ou 3 mois, ou une durée personnalisée (de 1 à 365 jours, avec date de début et date de fin). Le Coran est découpé en parts égales, en **unités traditionnelles** : juz, hizb, ½ hizb, ¼ de hizb (jusqu'à 240 jours), puis en pages. Un seul khatam à la fois ; les anciens sont gardés dans un **historique** (terminé ou interrompu). Un khatam interrompu peut être **repris** là où on s'était arrêté (le calendrier est décalé à partir d'aujourd'hui), et tout élément de l'historique peut être **supprimé**.
 - **Aujourd'hui** : la portion du jour découpée en séances selon le programme choisi, à cocher ; rattrapage d'un jour manqué sur 1, 2 ou 4 jours ; jours d'affilée ; fin du khatam.
 - **Programmes** : 4 programmes prédéfinis (Matin et soir, Surtout le matin, Réparti sur la journée, Après chaque prière) qui s'adaptent à la portion du jour, et un **programme personnalisé** (le moment et l'heure de chaque séance ; les parts sont calculées automatiquement).
 - **Lire** : le Coran complet, par juz, par sourate ou par page.

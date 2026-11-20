@@ -1,4 +1,5 @@
-import { useStore, update, currentDay, endDate, formatDate, setKhatamStart, stopTrial } from '../store';
+import { useState } from 'preact/hooks';
+import { useStore, update, currentDay, endDate, formatDate, setKhatamStart, stopTrial, resumeKhatam, resumeDay, deleteHistoryItem, hasProgress } from '../store';
 import { ramadanStart } from '../config';
 import { allProgrammes, sessionsFor, DEFAULT_CUSTOM, CUSTOM_ID, MAX_CUSTOM_SESSIONS, MOMENTS, customProgramme, sortByTime, CustomSession } from '../data/programmes';
 import { portion, dayLabel, pagesLabel, portionPages, pageSpan, juzTitle } from '../data/khatam';
@@ -13,6 +14,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
   const progs = allProgrammes();
   const trial = !!k.plannedStart && k.plannedStart !== k.start;
   const finished = !!k.finishedOn;
+  const [pending, setPending] = useState<{ id: string; action: 'resume' | 'delete' } | null>(null);
 
   const chooseProgramme = (id: string) => {
     if (id === CUSTOM_ID && !s.customProgramme.length) update({ customProgramme: DEFAULT_CUSTOM.map((x) => ({ ...x })) });
@@ -71,12 +73,45 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
         <>
           <h2>Historique</h2>
           <div class="card">
-            {s.history.map((h) => (
-              <div class="hist" key={h.id}>
-                <div><b>{h.name}</b><small>{h.days} jours · du {formatDate(h.start, false)}</small></div>
-                <span class={`pill ${h.status === 'done' ? '' : 'late'}`}>{h.status === 'done' ? `Terminé le ${formatDate(h.end, false)}` : `Interrompu · ${h.doneDays}/${h.days}`}</span>
-              </div>
-            ))}
+            {s.history.map((h) => {
+              const day = resumeDay(h);
+              const asking = pending?.id === h.id ? pending.action : null;
+              return (
+                <div class="hist-item" key={h.id}>
+                  <div class="hist">
+                    <div><b>{h.name}</b><small>{h.days} jours · du {formatDate(h.start, false)}</small></div>
+                    <span class={`pill ${h.status === 'done' ? '' : 'late'}`}>{h.status === 'done' ? `Terminé le ${formatDate(h.end, false)}` : `Interrompu · ${h.doneDays}/${h.days}`}</span>
+                  </div>
+                  {!asking && (
+                    <div class="hist-actions">
+                      {h.status === 'stopped' && <button class="ghost" onClick={() => setPending({ id: h.id, action: 'resume' })}>Reprendre</button>}
+                      <button class="ghost danger" onClick={() => setPending({ id: h.id, action: 'delete' })}>Supprimer</button>
+                    </div>
+                  )}
+                  {asking === 'resume' && (
+                    <div class="confirm">
+                      <p>{h.progress
+                        ? `Vous reprenez au jour ${day} sur ${h.days}, à partir d'aujourd'hui. Les dates sont décalées et vos jours déjà lus sont conservés.`
+                        : `Les jours déjà lus n'avaient pas été enregistrés pour ce khatam : il reprendra au jour 1, à partir d'aujourd'hui.`}
+                        {hasProgress(s) && !k.finishedOn ? ` Votre khatam en cours (${s.done.length}/${N} jours lus) sera gardé dans l'historique comme interrompu.` : ''}</p>
+                      <div class="actions-row">
+                        <button class="btn teal" onClick={() => { resumeKhatam(h.id); setPending(null); toast(`« ${h.name} » repris`); }}>Reprendre ce khatam</button>
+                        <button class="ghost" onClick={() => setPending(null)}>Annuler</button>
+                      </div>
+                    </div>
+                  )}
+                  {asking === 'delete' && (
+                    <div class="confirm">
+                      <p>Supprimer « {h.name} » de l'historique ? {h.status === 'stopped' ? 'Sa progression sera perdue.' : 'Cette action est définitive.'}</p>
+                      <div class="actions-row">
+                        <button class="btn danger-fill" onClick={() => { deleteHistoryItem(h.id); setPending(null); toast('Supprimé de l\'historique'); }}>Supprimer</button>
+                        <button class="ghost" onClick={() => setPending(null)}>Annuler</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}

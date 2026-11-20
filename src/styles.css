@@ -125,6 +125,14 @@ nav.tabs button[aria-current="page"] { color: var(--teal) }
 .rm-btn { border: 0; background: var(--bg); color: var(--muted); width: 32px; height: 32px; border-radius: 50%; font-size: 12px; padding: 0 }
 .rm-btn:disabled { opacity: .35 }
 .cpages { grid-column: 1 / -1; color: var(--muted); font-size: 12px; margin-top: -4px }
+.hist-item { border-bottom: 1px solid var(--line); padding-bottom: 10px }
+.hist-item:last-child { border-bottom: 0; padding-bottom: 0 }
+.hist-item .hist { border-bottom: 0; padding-bottom: 6px }
+.hist-actions { display: flex; gap: 8px; flex-wrap: wrap }
+.ghost.danger { color: var(--late) }
+.btn.danger-fill { background: var(--late); color: #fff }
+.confirm { background: var(--bg); border-radius: 14px; padding: 12px; display: grid; gap: 10px }
+.confirm p { margin: 0; font-size: 14px }
 .hist { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line) }
 .hist:last-child { border-bottom: 0 }
 .hist small { display: block; color: var(--muted); font-size: 12px }
