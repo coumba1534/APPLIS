@@ -2,7 +2,7 @@
 :root {
   --bg: #E9EEEA; --surface: #FBFCFA; --ink: #14302B; --muted: #5F716C; --line: #D5DED9;
   --teal: #1F5C52; --teal-soft: #DCEAE5; --saffron: #B8741F; --saffron-soft: #F4E6D1;
-  --late: #B4483C; --late-soft: #F5DEDA; --paper: #F6EEDC; --paper-ink: #2B2416; --on-teal: #FBFCFA; --on-saffron: #FFFFFF; --aya-paper: #8A5A16; --hero: #1F5C52; --on-hero: #FBFCFA;
+  --late: #B4483C; --late-soft: #F5DEDA; --paper: #F6EEDC; --paper-ink: #2B2416; --on-teal: #FBFCFA; --on-saffron: #FFFFFF; --aya-paper: #8A5A16; --hero: #1F5C52; --on-hero: #FBFCFA; --divine: #C62828;
   --display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --body: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
   --arabic: "Amiri", "Noto Naskh Arabic", serif;
@@ -14,13 +14,13 @@
   :root:not([data-theme="light"]) {
     --bg: #0B1513; --surface: #12201D; --ink: #E4EEEA; --muted: #93A6A0; --line: #24362F;
     --teal: #6FC1AE; --teal-soft: #1B3530; --saffron: #E3A456; --saffron-soft: #3A2B17;
-    --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
+    --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --divine: #FF8A80; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0B1513; --surface: #12201D; --ink: #E4EEEA; --muted: #93A6A0; --line: #24362F;
   --teal: #6FC1AE; --teal-soft: #1B3530; --saffron: #E3A456; --saffron-soft: #3A2B17;
-  --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
+  --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --divine: #FF8A80; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
 }
 * { box-sizing: border-box }
 [hidden] { display: none !important }
@@ -96,6 +96,10 @@ nav.tabs button[aria-current="page"] { color: var(--teal) }
 .opts button { border: 1px solid currentColor; background: var(--surface); border-radius: 10px; padding: 7px 10px; font-weight: 700; font-size: 13px; color: var(--late) }
 .catchup.on .opts button { color: var(--saffron) }
 
+/* Noms d'Allah et de Rabb en couleur, comme dans certains mushafs */
+.allah { color: var(--divine) }
+.finale .allah { color: #FFD1CC }
+
 /* Bandeau du Ramadan */
 .ramadan-banner { background: var(--saffron-soft); color: var(--ink); border-radius: 18px; padding: 16px; display: grid; gap: 10px }
 .rb-top { display: flex; gap: 12px; align-items: center }
@@ -130,6 +134,7 @@ nav.tabs button[aria-current="page"] { color: var(--teal) }
 .hist-item .hist { border-bottom: 0; padding-bottom: 6px }
 .hist-actions { display: flex; gap: 8px; flex-wrap: wrap }
 .ghost.danger { color: var(--late) }
+.link.stop-link { color: var(--muted); font-size: 13px; font-weight: 400; justify-self: start }
 .btn.danger-fill { background: var(--late); color: #fff }
 .confirm { background: var(--bg); border-radius: 14px; padding: 12px; display: grid; gap: 10px }
 .confirm p { margin: 0; font-size: 14px }

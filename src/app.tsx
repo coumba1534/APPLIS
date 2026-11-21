@@ -22,7 +22,7 @@ export function App() {
   const s = useStore();
   // À la réouverture, on revient sur le dernier onglet et la dernière lecture.
   const [tab, setTabState] = useState<Tab>(() => (s.onboarded && TABS.some(([id]) => id === s.lastTab) ? s.lastTab as Tab : 'today'));
-  const dayStartJuz = () => juzOf(portion(s.khatam.days, Math.min(Math.max(currentDay(s), 1), s.khatam.days))[0]);
+  const dayStartJuz = () => (s.khatam ? juzOf(portion(s.khatam.days, Math.min(Math.max(currentDay(s), 1), s.khatam.days))[0]) : 1);
   const [target, setTargetState] = useState<ReaderTarget>(() => s.readerTarget ?? { mode: 'juz', juz: dayStartJuz() });
   const [newOpen, setNewOpen] = useState<null | 'any' | 'ramadan'>(null);
   const config = useConfig();
@@ -31,7 +31,8 @@ export function App() {
   const setTab = (t: Tab) => { setTabState(t); update({ lastTab: t }); };
   const setTarget = (t: ReaderTarget) => { setTargetState(t); update({ readerTarget: t }); };
   const [readerTitle, setReaderTitle] = useState<[string, string]>(['Lire', '']);
-  const [finaleSeen, setFinaleSeen] = useState(s.done.length >= s.khatam.days);
+  const N = s.khatam?.days ?? 0;
+  const [finaleSeen, setFinaleSeen] = useState(!!s.khatam && s.done.length >= N);
 
   useEffect(() => { const id = startReminders(); return () => clearInterval(id); }, []);
   // Réglages à distance : à l'ouverture et chaque fois qu'on revient dans l'appli.
@@ -52,12 +53,12 @@ export function App() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  useEffect(() => { if (s.done.length < s.khatam.days) setFinaleSeen(false); }, [s.done.length, s.khatam.days]);
+  useEffect(() => { if (s.done.length < N) setFinaleSeen(false); }, [s.done.length, N]);
 
   const day = currentDay(s);
   const hello = `Assalamou alaykoum${s.name ? `, ${s.name}` : ''}`;
   const titles: Record<Tab, [string, string]> = {
-    today: [hello, day >= 1 && day <= s.khatam.days ? (s.khatam.kind === 'ramadan' ? `Jour ${day} du Ramadan` : `Jour ${day} sur ${s.khatam.days}`) : s.khatam.name],
+    today: [hello, !s.khatam ? 'Prêt pour un nouveau khatam' : day >= 1 && day <= N ? (s.khatam.kind === 'ramadan' ? `Jour ${day} du Ramadan` : `Jour ${day} sur ${N}`) : s.khatam.name],
     read: readerTitle,
     plan: ['Mon programme', 'Mon khatam, à mon rythme'],
     group: ['Mon groupe', 'On avance ensemble'],
@@ -105,7 +106,7 @@ export function App() {
         ))}
       </nav>
       {!s.onboarded && <Onboarding onDone={() => setTab('today')} />}
-      {s.done.length >= s.khatam.days && !finaleSeen && <Finale khatam={s.khatam} onClose={() => setFinaleSeen(true)} />}
+      {s.khatam && s.done.length >= N && !finaleSeen && <Finale khatam={s.khatam} onClose={() => setFinaleSeen(true)} />}
       {newOpen && <NewKhatam preselect={newOpen === 'ramadan' ? 'ramadan' : undefined} onClose={() => setNewOpen(null)} onStarted={() => { setTab('today'); window.scrollTo(0, 0); }} />}
       <Toast />
     </div>

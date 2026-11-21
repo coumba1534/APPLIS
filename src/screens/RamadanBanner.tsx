@@ -5,7 +5,7 @@ import { daysToRamadan, ramadanStart, ramadanVisible, useConfig } from '../confi
 export function RamadanBanner({ onOpen }: { onOpen: () => void }) {
   const s = useStore();
   useConfig();
-  if (!ramadanVisible() || s.khatam.kind === 'ramadan' || s.hideRamadanBanner === ramadanStart()) return null;
+  if (!ramadanVisible() || s.khatam?.kind === 'ramadan' || s.hideRamadanBanner === ramadanStart()) return null;
   const n = daysToRamadan();
   return (
     <div class="ramadan-banner">

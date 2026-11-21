@@ -7,6 +7,7 @@ import { InstallCard } from './InstallCard';
 import { RamadanBanner } from './RamadanBanner';
 
 export function streak(s: State) {
+  if (!s.khatam) return 0;
   const day = Math.min(currentDay(s), s.khatam.days);
   let n = 0;
   for (let d = s.done.includes(day) ? day : day - 1; d > 0 && s.done.includes(d); d--) n++;
@@ -14,6 +15,7 @@ export function streak(s: State) {
 }
 
 function pagesRead(s: State, day: number) {
+  if (!s.khatam) return 0;
   const N = s.khatam.days;
   let pages = 0;
   for (const d of s.done) { const [a, b] = portion(N, d); pages += portionPages(a, b); }
@@ -46,6 +48,25 @@ export function Today(props: Props) {
 function TodayMain({ openReader, onNewKhatam }: Props) {
   const s = useStore();
   const k = s.khatam;
+
+  // ---- Pas de khatam en cours ----
+  if (!k) {
+    const stopped = s.history.some((x) => x.status === 'stopped');
+    return (
+      <>
+        <div class="today">
+          <span class="small">Bismillah</span>
+          <span class="juz">Prêt pour un khatam ?</span>
+          <p style="margin:0">Choisissez une durée (1, 2, 3 mois ou personnalisée) et lisez le Coran du début à la fin, à votre rythme.</p>
+          <button class="btn" onClick={() => onNewKhatam()}>Commencer un khatam</button>
+        </div>
+        {stopped && <p class="note">Vous pouvez aussi reprendre un khatam interrompu depuis l'onglet Programme, dans l'historique.</p>}
+        {s.bookmark && <button class="link" onClick={() => openReader()}>Reprendre la lecture au marque-page</button>}
+        <InstallCard />
+      </>
+    );
+  }
+
   const N = k.days;
   const day = currentDay(s);
   const finished = !!k.finishedOn || s.done.length >= N;

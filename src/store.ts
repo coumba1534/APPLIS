@@ -56,8 +56,8 @@ export interface State {
   customProgramme: CustomSession[];
   /** Date du Ramadan pour laquelle on a masqué le bandeau « Le Ramadan approche ». */
   hideRamadanBanner: string | null;
-  /** Le khatam en cours (un seul à la fois). */
-  khatam: Khatam;
+  /** Le khatam personnel en cours (un seul à la fois), ou null s'il n'y en a pas. */
+  khatam: Khatam | null;
   history: HistoryItem[];
   /** Jours du khatam terminés. */
   done: number[];
@@ -175,10 +175,13 @@ export { todayISO, addDays, daysBetween };
 /** Dernier jour d'un khatam. */
 export const endDate = (k: Khatam) => addDays(k.start, k.days - 1);
 
-/** Jour du khatam : 1 à `days`, 0 ou moins avant le début, plus de `days` après la fin. */
+/** Jour du khatam : 1 à `days`, 0 ou moins avant le début, plus de `days` après la fin (0 sans khatam). */
 export function currentDay(s: State = state) {
-  return daysBetween(s.khatam.start, todayISO()) + 1;
+  return s.khatam ? daysBetween(s.khatam.start, todayISO()) + 1 : 0;
 }
+
+/** Vrai si un khatam personnel est en cours (commencé ou à venir, pas terminé). */
+export const hasActiveKhatam = (s: State = state) => !!s.khatam && !s.khatam.finishedOn;
 
 export function formatDate(iso: string, withWeekday = true) {
   const [y, m, d] = iso.split('-').map(Number);
@@ -191,6 +194,7 @@ export function formatDate(iso: string, withWeekday = true) {
 function commitDone(s: State, doneSet: Set<number>, extra: Partial<State> = {}): Partial<State> {
   const done = [...doneSet].sort((a, b) => a - b);
   const k = s.khatam;
+  if (!k) return { done, ...extra };
   const complete = done.length >= k.days;
   let khatam = k, history = s.history;
   if (complete && !k.finishedOn) {
@@ -245,7 +249,7 @@ export const hasProgress = (s: State = state) => s.done.length > 0 || Object.val
 /** Le khatam en cours, tel qu'on le range dans l'historique s'il est interrompu (null s'il n'a pas commencé ou s'il est terminé). */
 function interruptedEntry(s: State): HistoryItem | null {
   const cur = s.khatam;
-  if (cur.finishedOn || !hasProgress(s)) return null;
+  if (!cur || cur.finishedOn || !hasProgress(s)) return null;
   return {
     id: cur.id, name: cur.name, kind: cur.kind, start: cur.start, days: cur.days, doneDays: s.done.length, end: todayISO(), status: 'stopped',
     progress: { done: s.done, sessions: s.sessions, catchPlan: s.catchPlan },
@@ -263,14 +267,13 @@ export function resumeDay(item: HistoryItem) {
 /**
  * Reprend un khatam interrompu : il redevient le khatam en cours, avec sa progression.
  * Le calendrier est décalé pour qu'aujourd'hui tombe sur le premier jour pas encore lu.
- * Le khatam en cours, s'il a commencé, passe dans l'historique comme interrompu.
+ * Possible seulement s'il n'y a pas de khatam personnel en cours.
  */
 export function resumeKhatam(id: string) {
   update((s) => {
     const item = s.history.find((h) => h.id === id && h.status === 'stopped');
-    if (!item) return {};
-    const stopped = interruptedEntry(s);
-    const history = [...(stopped ? [stopped] : []), ...s.history.filter((h) => h.id !== id)];
+    if (!item || hasActiveKhatam(s)) return {}; // un seul khatam personnel à la fois
+    const history = s.history.filter((h) => h.id !== id);
     return {
       history,
       khatam: { id: item.id, kind: item.kind, name: item.name, days: item.days, start: addDays(todayISO(), -(resumeDay(item) - 1)), followsConfig: false },
@@ -302,16 +305,27 @@ export function startKhatam(k: Omit<Khatam, 'id'>) {
 
 /** Change les réglages du khatam en cours sans toucher à la progression (date de début). */
 export function setKhatamStart(start: string) {
-  update((s) => ({ khatam: { ...s.khatam, start, plannedStart: undefined, followsConfig: false } }));
+  update((s) => (s.khatam ? { khatam: { ...s.khatam, start, plannedStart: undefined, followsConfig: false } } : {}));
+}
+
+/**
+ * Arrête le khatam personnel en cours.
+ * `keep` : il est gardé dans l'historique (comme interrompu, on pourra le reprendre) ; sinon il est supprimé.
+ */
+export function stopKhatam(keep: boolean) {
+  update((s) => {
+    const stopped = keep ? interruptedEntry(s) : null;
+    return { khatam: null, history: stopped ? [stopped, ...s.history] : s.history, done: [], sessions: {}, catchPlan: null, shown: [] };
+  });
 }
 
 /** Mode essai : commence aujourd'hui, en gardant la date prévue. */
 export function startTrial() {
-  update((s) => ({ khatam: { ...s.khatam, plannedStart: s.khatam.plannedStart ?? s.khatam.start, start: todayISO() }, done: [], sessions: {}, catchPlan: null, shown: [] }));
+  update((s) => !s.khatam ? {} : ({ khatam: { ...s.khatam, plannedStart: s.khatam.plannedStart ?? s.khatam.start, start: todayISO() }, done: [], sessions: {}, catchPlan: null, shown: [] }));
 }
 
 export function stopTrial() {
-  update((s) => ({ khatam: { ...s.khatam, start: s.khatam.plannedStart ?? s.khatam.start, plannedStart: undefined, finishedOn: undefined }, done: [], sessions: {}, catchPlan: null, shown: [], history: s.history.filter((h) => h.id !== s.khatam.id) }));
+  update((s) => !s.khatam ? {} : ({ khatam: { ...s.khatam, start: s.khatam.plannedStart ?? s.khatam.start, plannedStart: undefined, finishedOn: undefined }, done: [], sessions: {}, catchPlan: null, shown: [], history: s.history.filter((h) => h.id !== s.khatam!.id) }));
 }
 
 /** Heure de rappel d'une séance : programme personnalisé (dans le programme) ou prédéfini (réglage à part). */
@@ -332,7 +346,7 @@ export function setReminderTime(programmeId: string, index: number, time: string
 export function syncRamadanStart() {
   const s = state, k = s.khatam;
   const target = ramadanStart();
-  if (k.kind !== 'ramadan' || !k.followsConfig || k.plannedStart || k.start === target) return;
+  if (!k || k.kind !== 'ramadan' || !k.followsConfig || k.plannedStart || k.start === target) return;
   if (daysBetween(todayISO(), k.start) <= 0) return; // déjà commencé : on ne change plus rien
   update({ khatam: { ...k, start: target } });
 }

@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { useStore, update, currentDay, endDate, formatDate, setKhatamStart, stopTrial, resumeKhatam, resumeDay, deleteHistoryItem, hasProgress } from '../store';
+import { useStore, update, currentDay, endDate, formatDate, setKhatamStart, stopTrial, stopKhatam, resumeKhatam, resumeDay, deleteHistoryItem, hasProgress } from '../store';
 import { ramadanStart } from '../config';
 import { allProgrammes, sessionsFor, DEFAULT_CUSTOM, CUSTOM_ID, MAX_CUSTOM_SESSIONS, MOMENTS, customProgramme, sortByTime, CustomSession } from '../data/programmes';
 import { portion, dayLabel, pagesLabel, portionPages, pageSpan, juzTitle } from '../data/khatam';
@@ -8,13 +8,17 @@ import { toast } from '../ui';
 export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
   const s = useStore();
   const k = s.khatam;
-  const N = k.days;
+  const N = k?.days ?? 30;
   const day = currentDay(s);
   const sample = portion(N, Math.min(Math.max(day, 1), N));
   const progs = allProgrammes();
-  const trial = !!k.plannedStart && k.plannedStart !== k.start;
-  const finished = !!k.finishedOn;
+  const trial = !!k?.plannedStart && k.plannedStart !== k.start;
+  const finished = !!k?.finishedOn;
+  /** Un khatam personnel en cours : on ne peut pas en commencer ou en reprendre un autre. */
+  const active = !!k && !finished;
+  const notStarted = !!k && day < 1;
   const [pending, setPending] = useState<{ id: string; action: 'resume' | 'delete' } | null>(null);
+  const [stopping, setStopping] = useState(false);
 
   const chooseProgramme = (id: string) => {
     if (id === CUSTOM_ID && !s.customProgramme.length) update({ customProgramme: DEFAULT_CUSTOM.map((x) => ({ ...x })) });
@@ -25,24 +29,48 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
   return (
     <>
       <h2>Mon khatam</h2>
-      <div class="card">
-        <div class="row"><h3>{k.name}</h3><span class="pill">{finished ? 'Terminé' : day < 1 ? 'À venir' : day > N ? 'Période finie' : `Jour ${day}/${N}`}</span></div>
-        <p>{N} jours · {dayLabel(N)}</p>
-        <p class="note">Du {formatDate(k.start)} au {formatDate(endDate(k))}</p>
-        <div class="setting">
-          <div>{k.kind === 'ramadan' ? '1er jour du Ramadan' : 'Date de début'}<small>{k.kind === 'ramadan' ? "Date estimée, à ajuster selon l'annonce de la lune" : 'Vous pouvez la décaler'}</small></div>
-          <input type="date" value={k.start} aria-label="Date de début" onChange={(e) => { const v = (e.target as HTMLInputElement).value; if (v) { setKhatamStart(v); toast(`Début : ${formatDate(v)}`); } }} />
+      {!k ? (
+        <div class="card">
+          <h3>Aucun khatam en cours</h3>
+          <p>Choisissez une durée et commencez à lire le Coran du début à la fin.</p>
+          <button class="btn teal" onClick={onNewKhatam}>Commencer un khatam</button>
+          {s.history.some((x) => x.status === 'stopped') && <p class="note">Vous pouvez aussi reprendre un khatam interrompu, dans l'historique plus bas.</p>}
         </div>
-        {trial && (
-          <div class="setting"><div>Mode essai<small>Commencé aujourd'hui, prévu le {formatDate(k.plannedStart!)}</small></div>
-            <button class="ghost" onClick={() => { stopTrial(); toast('Retour à la date prévue'); }}>Arrêter l'essai</button></div>
-        )}
-        {k.kind === 'ramadan' && k.start !== ramadanStart() && !trial && (
-          <button class="link" onClick={() => { setKhatamStart(ramadanStart()); toast('Date annoncée remise'); }}>Remettre la date annoncée</button>
-        )}
-        <button class="btn teal" onClick={onNewKhatam}>Nouveau khatam</button>
-        <p class="note">Un seul khatam à la fois. Le khatam en cours est gardé dans l'historique.</p>
-      </div>
+      ) : (
+        <div class="card">
+          <div class="row"><h3>{k.name}</h3><span class="pill">{finished ? 'Terminé' : day < 1 ? 'À venir' : day > N ? 'Période finie' : `Jour ${day}/${N}`}</span></div>
+          <p>{N} jours · {dayLabel(N)}</p>
+          <p class="note">Du {formatDate(k.start)} au {formatDate(endDate(k))}</p>
+          {notStarted && !trial && (
+            <div class="setting">
+              <div>{k.kind === 'ramadan' ? '1er jour du Ramadan' : 'Date de début'}<small>{k.kind === 'ramadan' ? "Date estimée, à ajuster selon l'annonce de la lune" : 'Modifiable jusqu\'au premier jour'}</small></div>
+              <input type="date" value={k.start} aria-label="Date de début" onChange={(e) => { const v = (e.target as HTMLInputElement).value; if (v) { setKhatamStart(v); toast(`Début : ${formatDate(v)}`); } }} />
+            </div>
+          )}
+          {notStarted && k.kind === 'ramadan' && k.start !== ramadanStart() && !trial && (
+            <button class="link" onClick={() => { setKhatamStart(ramadanStart()); toast('Date annoncée remise'); }}>Remettre la date annoncée</button>
+          )}
+          {trial && !finished && (
+            <div class="setting"><div>Mode essai<small>Commencé aujourd'hui, prévu le {formatDate(k.plannedStart!)}</small></div>
+              <button class="ghost" onClick={() => { stopTrial(); toast('Retour à la date prévue'); }}>Arrêter l'essai</button></div>
+          )}
+          {finished && <button class="btn teal" onClick={onNewKhatam}>Commencer un nouveau khatam</button>}
+          {active && !stopping && <button class="link stop-link" onClick={() => setStopping(true)}>Arrêter ce khatam</button>}
+          {active && stopping && (
+            <div class="confirm">
+              <p>Arrêter « {k.name} » ? Vous pourrez ensuite commencer un nouveau khatam.</p>
+              <div class="actions-row">
+                {hasProgress(s) && (
+                  <button class="btn teal" onClick={() => { stopKhatam(true); setStopping(false); toast('Khatam gardé dans l\'historique'); }}>Garder dans l'historique</button>
+                )}
+                <button class="btn danger-fill" onClick={() => { stopKhatam(false); setStopping(false); toast('Khatam supprimé'); }}>Supprimer définitivement</button>
+                <button class="ghost" onClick={() => setStopping(false)}>Annuler</button>
+              </div>
+              {hasProgress(s) && <p class="note">Gardé dans l'historique, il pourra être repris là où vous vous êtes arrêté.</p>}
+            </div>
+          )}
+        </div>
+      )}
 
       <h2>Mon programme de lecture</h2>
       <p class="note">La portion du jour ({pagesLabel(portionPages(sample[0], sample[1]))}) est découpée en séances. Changez de programme quand vous voulez.</p>
@@ -56,6 +84,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
       </div>
       {s.programmeId === CUSTOM_ID && <CustomEditor sample={sample} />}
 
+      {k && (<>
       <h2>Calendrier · {N} jours</h2>
       <div class="legend"><span style="--c:var(--teal)">Lu</span><span style="--c:var(--saffron)">Aujourd'hui</span><span style="--c:var(--late)">En retard</span><span style="--c:var(--line)">À venir</span></div>
       <div class="gridN">
@@ -68,6 +97,8 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
           return <div class={`cell ${cls}`} title={`Jour ${d} · ${juzTitle(a, b) ?? ''} pages ${p1} à ${p2}`}><b>{d}</b><small>{label}</small></div>;
         })}
       </div>
+
+      </>)}
 
       {s.history.length > 0 && (
         <>
@@ -84,7 +115,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
                   </div>
                   {!asking && (
                     <div class="hist-actions">
-                      {h.status === 'stopped' && <button class="ghost" onClick={() => setPending({ id: h.id, action: 'resume' })}>Reprendre</button>}
+                      {h.status === 'stopped' && !active && <button class="ghost" onClick={() => setPending({ id: h.id, action: 'resume' })}>Reprendre</button>}
                       <button class="ghost danger" onClick={() => setPending({ id: h.id, action: 'delete' })}>Supprimer</button>
                     </div>
                   )}
@@ -93,7 +124,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
                       <p>{h.progress
                         ? `Vous reprenez au jour ${day} sur ${h.days}, à partir d'aujourd'hui. Les dates sont décalées et vos jours déjà lus sont conservés.`
                         : `Les jours déjà lus n'avaient pas été enregistrés pour ce khatam : il reprendra au jour 1, à partir d'aujourd'hui.`}
-                        {hasProgress(s) && !k.finishedOn ? ` Votre khatam en cours (${s.done.length}/${N} jours lus) sera gardé dans l'historique comme interrompu.` : ''}</p>
+</p>
                       <div class="actions-row">
                         <button class="btn teal" onClick={() => { resumeKhatam(h.id); setPending(null); toast(`« ${h.name} » repris`); }}>Reprendre ce khatam</button>
                         <button class="ghost" onClick={() => setPending(null)}>Annuler</button>

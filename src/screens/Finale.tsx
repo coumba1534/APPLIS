@@ -1,5 +1,6 @@
 import duas from '../data/duas.json';
 import { toArabicDigits } from '../data/quran';
+import { ColoredAyah } from './QuranText';
 import type { Khatam } from '../store';
 
 export function Finale({ khatam, onClose }: { khatam: Khatam; onClose: () => void }) {
@@ -12,7 +13,7 @@ export function Finale({ khatam, onClose }: { khatam: Khatam; onClose: () => voi
         <div class="figs"><div><b>30</b><span>juz</span></div><div><b>604</b><span>pages</span></div><div><b>{khatam.days}</b><span>jours</span></div></div>
         {duas.map((d) => (
           <div class="dua">
-            <div class="ar">{d.ar} <span>﴿{toArabicDigits(d.v)}﴾</span></div>
+            <div class="ar"><ColoredAyah text={d.ar} s={d.s} n={d.v} /> <span>﴿{toArabicDigits(d.v)}﴾</span></div>
             <div class="fr">{d.fr}</div>
             <small>Sourate Al-Imran ({d.s}:{d.v})</small>
           </div>

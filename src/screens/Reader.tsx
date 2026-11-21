@@ -6,6 +6,7 @@ import {
 } from '../data/quran';
 import { toast } from '../ui';
 import { PageView } from './PageView';
+import { ColoredAyah } from './QuranText';
 import { setTheme } from '../theme';
 
 export const SCRIPTS = [
@@ -235,13 +236,13 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
         rows.push(n === 1
           ? <div class="sura" key={`s${si}`}><div class="frame">سورة {m[0]}</div><small>Sourate {si} · {m[1]} · {m[2]} · {m[3]} versets</small></div>
           : <div class="sura" key={`s${si}`}><small>Sourate {si} · {m[1]} · suite, à partir du verset {n}</small></div>);
-        if (n === 1 && si !== 1 && si !== 9) rows.push(<div class="bism" key={`b${si}`}>{BISMILLAH}</div>);
+        if (n === 1 && si !== 1 && si !== 9) rows.push(<div class="bism" key={`b${si}`}><ColoredAyah text={BISMILLAH} s={1} n={1} /></div>);
       }
       const p = pageOf(i);
       if (p !== pg) { pg = p; rows.push(<div class="pagemark" key={`p${p}`}>Page {p}</div>); }
       rows.push(
         <button key={i} id={`v${si}-${n}`} class={`verse ${i === markAbs ? 'marked' : ''}`} aria-label={`Sourate ${si}, verset ${n}`} onClick={() => mark(i)}>
-          <span class="ar">{ar.data[si - 1][n - 1]}{' '}
+          <span class="ar"><ColoredAyah text={ar.data[si - 1][n - 1]} s={si} n={n} />{' '}
             {script.id === 'medine' ? <span class="num hafs">{'۝' + toArabicDigits(n)}</span> : <span class="num">﴿{toArabicDigits(n)}﴾</span>}
           </span>
           {prefs.french && fr && <span class="fr"><b>{n}</b>{fr[si - 1][n - 1]}</span>}
@@ -313,7 +314,7 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
                 <div class="scripts">
                   {SCRIPTS.map((x) => (
                     <button class="script" aria-pressed={x.id === script.id} onClick={() => setPrefs({ script: x.id, spacing: null })}>
-                      <span class="smp" style={{ fontFamily: x.font }}>{BISMILLAH}</span><b>{x.name}</b><small>{x.desc}</small>
+                      <span class="smp" style={{ fontFamily: x.font }}><ColoredAyah text={BISMILLAH} s={1} n={1} /></span><b>{x.name}</b><small>{x.desc}</small>
                     </button>
                   ))}
                 </div>

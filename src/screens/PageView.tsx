@@ -1,5 +1,7 @@
 // Mode page : une page du mushaf de Médine à la fois, ligne par ligne comme le mushaf imprimé.
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { isAllah, isRabb, RABB_EXCEPTIONS } from '../data/divine';
+import { ColoredAyah } from './QuranText';
 import { SURAHS, BISMILLAH, posOf, pageFirstVerse, juzOf, loadMushaf, toArabicDigits, MushafLine, TOTAL_PAGES } from '../data/quran';
 
 interface Props {
@@ -77,22 +79,33 @@ export function PageView({ page, onPage, markAbs, onMark, paper, focus, onToggle
   const startRef = posOf(first);
   const special = page <= 2; // Al-Fatiha et le début d'Al-Baqara : lignes centrées
   let abs = first;
+  let rabbInAyah = 0; // occurrences de Rabb dans le verset en cours (pour les exceptions)
+  /** Classe du mot : « allah » pour les noms d'Allah et de Rabb (sauf exceptions). */
+  const divine = (w: string, verse: number) => {
+    if (isAllah(w)) return true;
+    if (!isRabb(w)) return false;
+    rabbInAyah++;
+    const { s: vs, n: vn } = posOf(verse);
+    return !(RABB_EXCEPTIONS[`${vs}:${vn}`] ?? []).includes(rabbInAyah);
+  };
 
   const lines = pages[page - 1].map((line, li) => {
     if (line[0] === 'H') {
       const s = line[1] as number;
       return <div class="mline head" key={li}><span class="frame">سورة {SURAHS[s - 1][0]}</span></div>;
     }
-    if (line[0] === 'B') return <div class="mline bism-line" key={li}>{BISMILLAH}</div>;
+    if (line[0] === 'B') return <div class="mline bism-line" key={li}><ColoredAyah text={BISMILLAH} s={1} n={1} /></div>;
     return (
       <div class={`mline text ${special ? 'center' : ''}`} key={li}>
         {line.map((tok, ti) => {
           const here = abs;
           if (typeof tok === 'number') {
             abs++;
+            rabbInAyah = 0;
             return <span key={ti} data-abs={here} class={`aya ${here === markAbs ? 'mk' : ''}`}>{'۝' + toArabicDigits(tok)}</span>;
           }
-          return <span key={ti} data-abs={here} class={here === markAbs ? 'mk' : undefined}>{tok}</span>;
+          const cls = [here === markAbs ? 'mk' : '', divine(tok, here) ? 'allah' : ''].filter(Boolean).join(' ');
+          return <span key={ti} data-abs={here} class={cls || undefined}>{tok}</span>;
         })}
       </div>
     );

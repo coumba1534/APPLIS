@@ -37,7 +37,7 @@ export function NewKhatam({ onClose, onStarted, preselect }: { onClose: () => vo
   const days = choice === 'custom' ? clampDays(customDays) : choices.find((c) => c.id === choice)!.days!;
   const end = addDays(start, days - 1);
   const [a, b] = portion(days, 1);
-  const inProgress = !s.khatam.finishedOn && hasProgress(s);
+  const inProgress = !!s.khatam && !s.khatam.finishedOn && hasProgress(s);
 
   const pick = (c: Choice) => {
     setChoice(c);
@@ -90,7 +90,7 @@ export function NewKhatam({ onClose, onStarted, preselect }: { onClose: () => vo
           <small>Jour 1 : de {refText(a)} à {refText(b)}</small>
         </div>
 
-        {inProgress && <p class="note warn">Votre khatam en cours ({s.done.length}/{s.khatam.days} jours lus) sera gardé dans l'historique comme interrompu.</p>}
+        {inProgress && <p class="note warn">Votre khatam en cours ({s.done.length}/{s.khatam?.days} jours lus) sera gardé dans l'historique comme interrompu.</p>}
 
         <div class="actions">
           <button class="link" onClick={onClose}>Annuler</button>

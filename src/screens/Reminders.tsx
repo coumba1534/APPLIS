@@ -10,8 +10,9 @@ export function Reminders() {
   const s = useStore();
   const [perm, setPerm] = useState(notificationPermission());
   const prog = programmeById(s.programmeId);
-  const day = Math.min(Math.max(currentDay(s), 1), s.khatam.days);
-  const sessions = sessionsFor(prog, portion(s.khatam.days, day));
+  const N = s.khatam?.days ?? 30;
+  const day = Math.min(Math.max(currentDay(s), 1), N);
+  const sessions = sessionsFor(prog, portion(N, day));
 
   return (
     <>

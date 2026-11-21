@@ -52,6 +52,7 @@ const minutes = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); 
 export function startReminders() {
   const tick = () => {
     const s = getState();
+    if (!s.khatam) return;
     const day = currentDay(s);
     const N = s.khatam.days;
     if (day < 1 || day > N || s.khatam.finishedOn || notificationPermission() !== 'granted') return;

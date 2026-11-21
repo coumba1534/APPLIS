@@ -15,11 +15,13 @@ export function Group() {
         </label>
         <p class="note">Le code est gardé pour le moment où les groupes seront activés. Vous pourrez rejoindre un groupe avec un code, ou en créer un.</p>
       </div>
-      <div class="card">
-        <h3>Ma progression</h3>
-        <p>{s.done.length} jour{s.done.length > 1 ? 's' : ''} lu{s.done.length > 1 ? 's' : ''} sur {s.khatam.days} ({s.khatam.name}).</p>
-        <div class="bar" style="color:var(--teal)"><i style={{ width: `${(s.done.length / s.khatam.days) * 100}%` }} /></div>
-      </div>
+      {s.khatam && (
+        <div class="card">
+          <h3>Ma progression</h3>
+          <p>{s.done.length} jour{s.done.length > 1 ? 's' : ''} lu{s.done.length > 1 ? 's' : ''} sur {s.khatam.days} ({s.khatam.name}).</p>
+          <div class="bar" style="color:var(--teal)"><i style={{ width: `${(s.done.length / s.khatam.days) * 100}%` }} /></div>
+        </div>
+      )}
     </>
   );
 }
