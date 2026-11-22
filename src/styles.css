@@ -2,7 +2,7 @@
 :root {
   --bg: #E9EEEA; --surface: #FBFCFA; --ink: #14302B; --muted: #5F716C; --line: #D5DED9;
   --teal: #1F5C52; --teal-soft: #DCEAE5; --saffron: #B8741F; --saffron-soft: #F4E6D1;
-  --late: #B4483C; --late-soft: #F5DEDA; --paper: #F6EEDC; --paper-ink: #2B2416; --on-teal: #FBFCFA; --on-saffron: #FFFFFF; --aya-paper: #8A5A16; --hero: #1F5C52; --on-hero: #FBFCFA; --divine: #C62828;
+  --late: #B4483C; --late-soft: #F5DEDA; --paper: #F6EEDC; --paper-ink: #2B2416; --on-teal: #FBFCFA; --on-saffron: #FFFFFF; --aya-paper: #8A5A16; --hero: #1F5C52; --on-hero: #FBFCFA; --divine: #C62828; --page-sep: #A7B6B0;
   --display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --body: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
   --arabic: "Amiri", "Noto Naskh Arabic", serif;
@@ -14,13 +14,13 @@
   :root:not([data-theme="light"]) {
     --bg: #0B1513; --surface: #12201D; --ink: #E4EEEA; --muted: #93A6A0; --line: #24362F;
     --teal: #6FC1AE; --teal-soft: #1B3530; --saffron: #E3A456; --saffron-soft: #3A2B17;
-    --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --divine: #FF8A80; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
+    --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --divine: #FF8A80; --page-sep: #4D625B; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0B1513; --surface: #12201D; --ink: #E4EEEA; --muted: #93A6A0; --line: #24362F;
   --teal: #6FC1AE; --teal-soft: #1B3530; --saffron: #E3A456; --saffron-soft: #3A2B17;
-  --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --divine: #FF8A80; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
+  --late: #E8887C; --late-soft: #3A1E1A; --on-teal: #0B1513; --on-saffron: #1A1206; --hero: #1A4A41; --on-hero: #E4EEEA; --divine: #FF8A80; --page-sep: #4D625B; --paper: #2A2419; --paper-ink: #EFE4CC; --aya-paper: #E3A456; color-scheme: dark;
 }
 * { box-sizing: border-box }
 [hidden] { display: none !important }
@@ -223,11 +223,11 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .mushaf.paper .mhead, .mushaf.paper .mfoot { color: color-mix(in srgb, var(--paper-ink) 70%, transparent) }
 .mhead .ar-name { font-family: var(--arabic); font-size: 16px }
 .mviewport { overflow: hidden; display: grid; min-width: 0; touch-action: pan-y }
-/* Trois pages côte à côte (suivante, actuelle, précédente) ; le fin trait entre elles est le fond de la piste. */
-.mtrack { display: flex; gap: 1px; direction: ltr; background: var(--line); transform: translateX(calc(-100% - 1px)); will-change: transform }
-.mslide { flex: 0 0 100%; min-width: 0; display: grid; background: var(--surface) }
-.mushaf.paper .mslide { background: var(--paper) }
-.mushaf.paper .mtrack { background: color-mix(in srgb, var(--paper-ink) 18%, var(--paper)) }
+/* Trois pages côte à côte (suivante, actuelle, précédente), séparées de 2 px.
+   Le trait de séparation est l'ombre gauche de chaque page : visible pendant le glissement, masquée au repos. */
+.mtrack { display: flex; gap: 2px; direction: ltr; transform: translateX(calc(-100% - 2px)); will-change: transform }
+.mslide { flex: 0 0 100%; min-width: 0; display: grid; background: var(--surface); box-shadow: -2px 0 0 var(--page-sep) }
+.mushaf.paper .mslide { background: var(--paper); box-shadow: -2px 0 0 color-mix(in srgb, var(--paper-ink) 32%, var(--paper)) }
 .mpage { --mfs: 22px; font-family: "KFGQPC Hafs", var(--quran); display: grid; min-width: 0 }
 .mline { font-size: var(--mfs); line-height: 1.9; white-space: nowrap; min-width: 0 }
 .mline.text { display: flex; justify-content: space-between; overflow: hidden }
