@@ -222,6 +222,12 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .mhead { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted) }
 .mushaf.paper .mhead, .mushaf.paper .mfoot { color: color-mix(in srgb, var(--paper-ink) 70%, transparent) }
 .mhead .ar-name { font-family: var(--arabic); font-size: 16px }
+.mviewport { overflow: hidden; display: grid; min-width: 0; touch-action: pan-y }
+/* Trois pages côte à côte (suivante, actuelle, précédente) ; le fin trait entre elles est le fond de la piste. */
+.mtrack { display: flex; gap: 1px; direction: ltr; background: var(--line); transform: translateX(calc(-100% - 1px)); will-change: transform }
+.mslide { flex: 0 0 100%; min-width: 0; display: grid; background: var(--surface) }
+.mushaf.paper .mslide { background: var(--paper) }
+.mushaf.paper .mtrack { background: color-mix(in srgb, var(--paper-ink) 18%, var(--paper)) }
 .mpage { --mfs: 22px; font-family: "KFGQPC Hafs", var(--quran); display: grid; min-width: 0 }
 .mline { font-size: var(--mfs); line-height: 1.9; white-space: nowrap; min-width: 0 }
 .mline.text { display: flex; justify-content: space-between; overflow: hidden }
