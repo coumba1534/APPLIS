@@ -18,8 +18,8 @@ interface Props {
 
 /** Durée du glissement d'une page (ms). */
 const TURN_MS = 280;
-/** Écart entre deux pages pendant le glissement (le fin trait de séparation). */
-const GAP = 2;
+/** Écart entre deux pages pendant le glissement : un espace de chaque côté du double trait de séparation. */
+const GAP = 20;
 
 export function PageView({ page, onPage, markAbs, onMark, paper, focus, onToggleFocus }: Props) {
   const [pages, setPages] = useState<MushafLine[][] | null>(null);

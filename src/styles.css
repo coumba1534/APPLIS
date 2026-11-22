@@ -223,11 +223,13 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .mushaf.paper .mhead, .mushaf.paper .mfoot { color: color-mix(in srgb, var(--paper-ink) 70%, transparent) }
 .mhead .ar-name { font-family: var(--arabic); font-size: 16px }
 .mviewport { overflow: hidden; display: grid; min-width: 0; touch-action: pan-y }
-/* Trois pages côte à côte (suivante, actuelle, précédente), séparées de 2 px.
-   Le trait de séparation est l'ombre gauche de chaque page : visible pendant le glissement, masquée au repos. */
-.mtrack { display: flex; gap: 2px; direction: ltr; transform: translateX(calc(-100% - 2px)); will-change: transform }
-.mslide { flex: 0 0 100%; min-width: 0; display: grid; background: var(--surface); box-shadow: -2px 0 0 var(--page-sep) }
-.mushaf.paper .mslide { background: var(--paper); box-shadow: -2px 0 0 color-mix(in srgb, var(--paper-ink) 32%, var(--paper)) }
+/* Trois pages côte à côte (suivante, actuelle, précédente), séparées de 20 px.
+   Au milieu de cet espace, un double trait fin (comme dans un mushaf ouvert) : visible pendant le glissement,
+   hors de l'écran au repos. Il est dessiné à gauche de chaque page. */
+.mtrack { display: flex; gap: 20px; direction: ltr; transform: translateX(calc(-100% - 20px)); will-change: transform; --sep: var(--page-sep) }
+.mushaf.paper .mtrack { --sep: color-mix(in srgb, var(--paper-ink) 32%, var(--paper)) }
+.mslide { position: relative; flex: 0 0 100%; min-width: 0; display: grid }
+.mslide::before { content: ""; position: absolute; top: 0; bottom: 0; left: -12px; width: 4px; border-left: 1px solid var(--sep); border-right: 1px solid var(--sep); pointer-events: none }
 .mpage { --mfs: 22px; font-family: "KFGQPC Hafs", var(--quran); display: grid; min-width: 0 }
 .mline { font-size: var(--mfs); line-height: 1.9; white-space: nowrap; min-width: 0 }
 .mline.text { display: flex; justify-content: space-between; overflow: hidden }
