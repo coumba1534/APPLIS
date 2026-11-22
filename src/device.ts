@@ -1,5 +1,6 @@
 // Installation sur l'écran d'accueil et notifications.
-import { getState, todayISO, update, currentDay } from './store';
+import { getState, todayISO, update, currentDay, getTrack, activeTrackId, closeRamadanIfOver, currentRamadanId, formatDate } from './store';
+import { ramadanVisible, ramadanName, ramadanStart } from './config';
 import { programmeById, sessionsFor } from './data/programmes';
 import { portion, juzTitle, pagesLabel } from './data/khatam';
 
@@ -44,39 +45,69 @@ export const timeFor = (programmeId: string, index: number, fallback: string) =>
 
 const minutes = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
 
+/** Textes des notifications du Ramadan (utilisés aussi par les outils de test). */
+export const ramadanNotifications = {
+  available: () => ({
+    title: 'Votre khatam du Ramadan est disponible 🌙',
+    body: `${ramadanName()} commence le ${formatDate(ramadanStart())}. Rejoignez le khatam : le Coran en entier en 29 jours.`,
+  }),
+  firstDay: () => ({
+    title: 'Ramadan Moubarak 🌙',
+    body: "Votre khatam du Ramadan commence aujourd'hui : jour 1, juz 1. Bismillah !",
+  }),
+};
+
 /**
- * Vérifie chaque minute s'il est l'heure d'une séance non cochée.
+ * Vérifie chaque minute : l'annonce du khatam du Ramadan, son premier jour, et l'heure des séances non cochées.
  * Limite actuelle : fonctionne quand l'appli est ouverte ou en arrière-plan récent.
  * Les rappels appli fermée nécessitent un serveur d'envoi (étape Firebase).
  */
 export function startReminders() {
   const tick = () => {
+    closeRamadanIfOver();
+    if (notificationPermission() !== 'granted') return;
     const s = getState();
-    if (!s.khatam) return;
-    const day = currentDay(s);
-    const N = s.khatam.days;
-    if (day < 1 || day > N || s.khatam.finishedOn || notificationPermission() !== 'granted') return;
+    const date = todayISO();
+
+    // Notifications ponctuelles du Ramadan (une seule fois chacune).
+    const rid = currentRamadanId();
+    const once = (key: string, n: { title: string; body: string }) => {
+      if (getState().notified.includes(key)) return;
+      update((st) => ({ notified: [...st.notified, key] }));
+      notify(n.title, n.body, key);
+    };
+    const doneThisYear = s.history.some((h) => h.id === rid);
+    if (ramadanVisible() && !s.ramadan && !doneThisYear) once(`annonce:${rid}`, ramadanNotifications.available());
+    if (s.ramadan && s.ramadan.khatam.start === date) once(`debut:${s.ramadan.khatam.id}`, ramadanNotifications.firstDay());
+
+    // Rappels des séances du khatam qu'on lit en ce moment (celui du Ramadan pendant le mois).
+    const id = activeTrackId(s);
+    const t = id ? getTrack(s, id) : null;
+    if (!id || !t) return;
+    const day = currentDay(s, id);
+    const N = t.khatam.days;
+    if (day < 1 || day > N || t.khatam.finishedOn) return;
     const now = new Date();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const date = todayISO();
     const prog = programmeById(s.programmeId);
-    const doneToday = s.done.includes(day);
-    const checked = new Set(s.sessions[day] ?? []);
+    const doneToday = t.done.includes(day);
+    const checked = new Set(t.sessions[day] ?? []);
+    const prefix = id === 'ramadan' ? '🌙 ' : '';
     const due: { key: string; title: string; body: string }[] = [];
     if (s.reminders.sessions && !doneToday) {
       for (const sess of sessionsFor(prog, portion(N, day))) {
-        const t = minutes(timeFor(prog.id, sess.index, sess.defaultTime));
-        if (!checked.has(sess.index) && nowMin >= t && nowMin < t + 90)
-          due.push({ key: `s${sess.index}`, title: `${sess.label} · ${juzTitle(...portion(N, day)) ?? `Jour ${day}`}`, body: `${sess.detail ? sess.detail + ', ' : ''}pages ${sess.pageFrom} à ${sess.pageTo} (${pagesLabel(sess.pages)}). Bismillah !` });
+        const m = minutes(timeFor(prog.id, sess.index, sess.defaultTime));
+        if (!checked.has(sess.index) && nowMin >= m && nowMin < m + 90)
+          due.push({ key: `${id}:s${sess.index}`, title: `${prefix}${sess.label} · ${juzTitle(...portion(N, day)) ?? `Jour ${day}`}`, body: `${sess.detail ? sess.detail + ', ' : ''}pages ${sess.pageFrom} à ${sess.pageTo} (${pagesLabel(sess.pages)}). Bismillah !` });
       }
     }
     if (s.reminders.lateEvening && !doneToday && nowMin >= 21 * 60 && nowMin < 23 * 60)
-      due.push({ key: 'late', title: `Jour ${day} pas encore terminé`, body: 'Il reste encore un peu de temps ce soir, courage !' });
+      due.push({ key: `${id}:late`, title: `${prefix}Jour ${day} pas encore terminé`, body: 'Il reste encore un peu de temps ce soir, courage !' });
     for (const d of due) {
-      const id = `${date}:${d.key}`;
-      if (s.shown.includes(id)) continue;
-      update((st) => ({ shown: [...st.shown.filter((x) => x.startsWith(date)), id] }));
-      notify(d.title, d.body, id);
+      const key = `${date}:${d.key}`;
+      if (getState().shown.includes(key)) continue;
+      update((st) => ({ shown: [...st.shown.filter((x) => x.startsWith(date)), key] }));
+      notify(d.title, d.body, key);
     }
   };
   tick();

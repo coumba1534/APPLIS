@@ -100,6 +100,14 @@ nav.tabs button[aria-current="page"] { color: var(--teal) }
 .allah { color: var(--divine) }
 .finale .allah { color: #FFD1CC }
 
+/* Khatam du Ramadan */
+.today.ramadan { background: linear-gradient(160deg, var(--hero), color-mix(in srgb, var(--hero) 70%, #3B2A12)) }
+.track-name { font-family: var(--display); font-weight: 700; font-size: 14px; opacity: .9 }
+.ramadan-soon h3, .ramadan-end h3 { font-family: var(--display) }
+.ramadan-end { border-color: var(--saffron); background: var(--saffron-soft) }
+.test-tools { border-style: dashed }
+.test-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+
 /* Bandeau du Ramadan */
 .ramadan-banner { background: var(--saffron-soft); color: var(--ink); border-radius: 18px; padding: 16px; display: grid; gap: 10px }
 .rb-top { display: flex; gap: 12px; align-items: center }

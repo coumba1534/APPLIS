@@ -1,5 +1,7 @@
 import { useState } from 'preact/hooks';
-import { useStore, update, currentDay, setReminderTime } from '../store';
+import { useStore, update, currentDay, setReminderTime, activeTrackId, getTrack, simulateRamadan, formatDate, addDays, todayISO } from '../store';
+import { useConfig, ramadanTest, ramadanEnd } from '../config';
+import { ramadanNotifications } from '../device';
 import { programmeById, sessionsFor } from '../data/programmes';
 import { portion, pagesLabel } from '../data/khatam';
 import { askNotifications, notificationPermission, notificationsSupported, notify, timeFor, isIOS, isStandalone } from '../device';
@@ -10,8 +12,10 @@ export function Reminders() {
   const s = useStore();
   const [perm, setPerm] = useState(notificationPermission());
   const prog = programmeById(s.programmeId);
-  const N = s.khatam?.days ?? 30;
-  const day = Math.min(Math.max(currentDay(s), 1), N);
+  const config = useConfig();
+  const id = activeTrackId(s) ?? 'personal';
+  const N = getTrack(s, id)?.khatam.days ?? 30;
+  const day = Math.min(Math.max(currentDay(s, id), 1), N);
   const sessions = sessionsFor(prog, portion(N, day));
 
   return (
@@ -55,6 +59,45 @@ export function Reminders() {
             onChange={() => update({ reminders: { ...s.reminders, lateEvening: !s.reminders.lateEvening } })} />
         </div>
       </div>
+      {config.testMode && <TestTools />}
     </>
+  );
+}
+
+/**
+ * Outils de test (affichés quand config.json contient "testMode": true) :
+ * simule un Ramadan sur ce téléphone seulement, pour voir l'annonce, le khatam, la pause et la fin du mois.
+ */
+function TestTools() {
+  const s = useStore();
+  useConfig();
+  const t = ramadanTest();
+  const today = todayISO();
+  const sim = (offset: number, label: string) => { simulateRamadan(addDays(today, offset)); toast(label); };
+  const sendAll = async () => {
+    const a = ramadanNotifications.available(), b = ramadanNotifications.firstDay();
+    const ok = await notify(a.title, a.body, 'test-annonce');
+    await notify(b.title, b.body, 'test-debut');
+    await notify('Après Fajr · Jour 1', 'Pages 1 à 11 (≈ 10,5 pages). Bismillah !', 'test-seance');
+    toast(ok ? 'Notifications de test envoyées' : "Autorisez d'abord les rappels (en haut de cet écran)");
+  };
+  return (
+    <div class="card test-tools">
+      <h3>Outils de test</h3>
+      <p class="note">Simule un Ramadan sur ce téléphone seulement, pour voir l'annonce, le khatam du Ramadan, la pause du khatam personnel et la fin du mois. Les autres utilisateurs ne voient rien.</p>
+      <p><b>{t ? `Ramadan simulé : du ${formatDate(t)} au ${formatDate(ramadanEnd())}` : 'Aucune simulation en cours'}</b>{s.ramadan ? ' · khatam rejoint' : ''}</p>
+      <div class="test-grid">
+        <button class="ghost" onClick={() => sim(10, 'Le Ramadan commence dans 10 jours (annonce)')}>Annonce · J − 10</button>
+        <button class="ghost" onClick={() => sim(1, 'Le Ramadan commence demain')}>Veille du Ramadan</button>
+        <button class="ghost" onClick={() => sim(0, "Le Ramadan commence aujourd'hui")}>1er jour</button>
+        <button class="ghost" onClick={() => sim(-26, 'Jour 27 du Ramadan')}>Jour 27</button>
+        <button class="ghost" onClick={() => sim(-29, 'Dernier jour du Ramadan (jour 30)')}>Dernier jour</button>
+        <button class="ghost" onClick={() => sim(-30, "C'est l'Aïd : le Ramadan est terminé")}>Après l'Aïd</button>
+      </div>
+      <div class="actions-row">
+        <button class="ghost" onClick={sendAll}>Envoyer les notifications de test</button>
+        {t && <button class="ghost danger" onClick={() => { simulateRamadan(null); toast('Simulation arrêtée'); }}>Arrêter la simulation</button>}
+      </div>
+    </div>
   );
 }

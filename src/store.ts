@@ -5,7 +5,7 @@ import type { ReaderTarget } from './screens/Reader';
 import { clampDays, portion, portionPages } from './data/khatam';
 import type { CustomSession } from './data/programmes';
 import { addDays, daysBetween, todayISO } from './dates';
-import { ramadanStart } from './config';
+import { ramadanStart, ramadanName, ramadanEnd, ramadanTest, setRamadanTest, RAMADAN_KHATAM_DAYS } from './config';
 
 /**
  * Rattrapage d'un jour manqué : la portion de ce jour est lue en `parts` morceaux égaux,
@@ -30,7 +30,26 @@ export interface Khatam {
   finishedOn?: string;
   /** Ramadan : le début suit la date annoncée à distance, tant qu'on ne l'a pas modifié soi-même. */
   followsConfig?: boolean;
+  /** Khatam personnel : périodes de pause (pendant le Ramadan, si on suit le khatam du Ramadan). */
+  pauses?: Pause[];
 }
+
+/** Une pause du khatam personnel, du `from` au `to` inclus. `test` : issue d'un Ramadan simulé. */
+export interface Pause { from: string; to: string; test?: boolean }
+
+/** Le khatam du Ramadan : 29 jours, à côté du khatam personnel (qui est mis en pause pendant le mois). */
+export interface RamadanState {
+  khatam: Khatam;
+  done: number[];
+  sessions: Record<string, number[]>;
+  catchPlan: CatchPlan | null;
+  /** Jour où on l'a rejoint. */
+  joinedOn: string;
+}
+
+/** Les deux suivis possibles : le khatam personnel et celui du Ramadan. */
+export type TrackId = 'personal' | 'ramadan';
+export interface Track { id: TrackId; khatam: Khatam; done: number[]; sessions: Record<string, number[]>; catchPlan: CatchPlan | null }
 
 export interface HistoryItem {
   id: string;
@@ -58,6 +77,12 @@ export interface State {
   hideRamadanBanner: string | null;
   /** Le khatam personnel en cours (un seul à la fois), ou null s'il n'y en a pas. */
   khatam: Khatam | null;
+  /** Le khatam du Ramadan, si on l'a rejoint. */
+  ramadan: RamadanState | null;
+  /** Message à afficher après la fin du Ramadan (khatam terminé ou non). */
+  ramadanEnded: { name: string; doneDays: number; days: number; finished: boolean; test?: boolean } | null;
+  /** Notifications ponctuelles déjà envoyées (annonce du Ramadan, premier jour…). */
+  notified: string[];
   history: HistoryItem[];
   /** Jours du khatam terminés. */
   done: number[];
@@ -101,6 +126,9 @@ const initial: State = {
   programmeId: 'p1',
   customProgramme: [],
   khatam: monthKhatam(),
+  ramadan: null,
+  ramadanEnded: null,
+  notified: [],
   history: [],
   hideRamadanBanner: null,
   done: [],
@@ -172,12 +200,69 @@ export function useStore(): State {
 
 export { todayISO, addDays, daysBetween };
 
-/** Dernier jour d'un khatam. */
-export const endDate = (k: Khatam) => addDays(k.start, k.days - 1);
+const later = (a: string, b: string) => (a > b ? a : b);
+const earlier = (a: string, b: string) => (a < b ? a : b);
+/** Nombre de jours communs aux périodes [from, to] et [a, b] (bornes incluses). */
+function overlap(from: string, to: string, a: string, b: string) {
+  const x = later(from, a), y = earlier(to, b);
+  return x > y ? 0 : daysBetween(x, y) + 1;
+}
 
-/** Jour du khatam : 1 à `days`, 0 ou moins avant le début, plus de `days` après la fin (0 sans khatam). */
-export function currentDay(s: State = state) {
-  return s.khatam ? daysBetween(s.khatam.start, todayISO()) + 1 : 0;
+/**
+ * Pause en cours ou à venir du khatam personnel : pendant le Ramadan, si on a rejoint son khatam.
+ * Elle commence au 1er jour du Ramadan (ou au jour où on l'a rejoint) et finit au dernier jour du mois.
+ */
+export function livePause(s: State = state): Pause | null {
+  if (!s.ramadan || !s.khatam) return null;
+  const from = later(s.ramadan.khatam.start, s.ramadan.joinedOn);
+  const to = ramadanEnd();
+  return from > to ? null : { from, to, test: !!ramadanTest() };
+}
+const pausesOf = (s: State) => [...(s.khatam?.pauses ?? []), ...(livePause(s) ? [livePause(s)!] : [])];
+const pausedDays = (s: State, a: string, b: string) => pausesOf(s).reduce((t, p) => t + overlap(p.from, p.to, a, b), 0);
+
+/** Vrai si le khatam personnel est en pause aujourd'hui (Ramadan). */
+export function isPaused(s: State = state) {
+  const t = todayISO();
+  return !!s.khatam && t >= s.khatam.start && pausesOf(s).some((p) => p.from <= t && t <= p.to);
+}
+/** Fin de la pause en cours : le khatam personnel reprend le lendemain. */
+export function pauseEnd(s: State = state) {
+  const t = todayISO();
+  return pausesOf(s).find((p) => p.from <= t && t <= p.to)?.to ?? null;
+}
+
+/** Dernier jour d'un khatam (le khatam personnel est prolongé de ses jours de pause). */
+export const endDate = (k: Khatam, s: State = state) =>
+  addDays(k.start, k.days - 1 + (s.khatam && k.id === s.khatam.id ? pausedDays(s, k.start, '9999-12-31') : 0));
+
+/**
+ * Jour du khatam : 1 à `days`, 0 ou moins avant le début, plus de `days` après la fin (0 sans khatam).
+ * Les jours de pause ne comptent pas : le calendrier du khatam personnel se décale pendant le Ramadan.
+ */
+export function currentDay(s: State = state, id: TrackId = 'personal') {
+  const t = todayISO();
+  if (id === 'ramadan') return s.ramadan ? daysBetween(s.ramadan.khatam.start, t) + 1 : 0;
+  if (!s.khatam) return 0;
+  const raw = daysBetween(s.khatam.start, t) + 1;
+  return raw < 1 ? raw : raw - pausedDays(s, s.khatam.start, t);
+}
+
+/** Le suivi demandé (khatam personnel ou du Ramadan), ou null s'il n'existe pas. */
+export function getTrack(s: State, id: TrackId): Track | null {
+  if (id === 'personal') return s.khatam ? { id, khatam: s.khatam, done: s.done, sessions: s.sessions, catchPlan: s.catchPlan } : null;
+  return s.ramadan ? { id, khatam: s.ramadan.khatam, done: s.ramadan.done, sessions: s.ramadan.sessions, catchPlan: s.ramadan.catchPlan } : null;
+}
+type TrackPatch = Partial<Pick<Track, 'khatam' | 'done' | 'sessions' | 'catchPlan'>>;
+function patchTrack(s: State, id: TrackId, p: TrackPatch): Partial<State> {
+  if (id === 'ramadan') return s.ramadan ? { ramadan: { ...s.ramadan, ...p } } : {};
+  return { ...p } as Partial<State>;
+}
+
+/** Le Ramadan est-il en cours pour ce khatam du Ramadan (du 1er jour au dernier jour du mois) ? */
+export function ramadanActive(s: State = state) {
+  const t = todayISO();
+  return !!s.ramadan && t >= s.ramadan.khatam.start && t <= ramadanEnd();
 }
 
 /** Vrai si un khatam personnel est en cours (commencé ou à venir, pas terminé). */
@@ -191,10 +276,11 @@ export function formatDate(iso: string, withWeekday = true) {
 // ---- Actions ----
 
 /** Applique un nouvel ensemble de jours terminés : enregistre la fin du khatam dans l'historique, ou l'en retire. */
-function commitDone(s: State, doneSet: Set<number>, extra: Partial<State> = {}): Partial<State> {
+function commitDone(s: State, id: TrackId, doneSet: Set<number>, extra: TrackPatch = {}): Partial<State> {
   const done = [...doneSet].sort((a, b) => a - b);
-  const k = s.khatam;
-  if (!k) return { done, ...extra };
+  const t = getTrack(s, id);
+  if (!t) return {};
+  const k = t.khatam;
   const complete = done.length >= k.days;
   let khatam = k, history = s.history;
   if (complete && !k.finishedOn) {
@@ -206,45 +292,56 @@ function commitDone(s: State, doneSet: Set<number>, extra: Partial<State> = {}):
     khatam = rest;
     history = history.filter((h) => h.id !== k.id);
   }
-  return { done, khatam, history, ...extra };
+  return { ...patchTrack(s, id, { done, khatam, ...extra }), history };
 }
 
-export function toggleSession(day: number, index: number, total: number) {
+export function toggleSession(day: number, index: number, total: number, id: TrackId = 'personal') {
   update((s) => {
-    const cur = new Set(s.sessions[day] ?? (s.done.includes(day) ? [...Array(total).keys()] : []));
+    const t = getTrack(s, id);
+    if (!t) return {};
+    const cur = new Set(t.sessions[day] ?? (t.done.includes(day) ? [...Array(total).keys()] : []));
     cur.has(index) ? cur.delete(index) : cur.add(index);
-    const doneSet = new Set(s.done);
+    const doneSet = new Set(t.done);
     cur.size >= total ? doneSet.add(day) : doneSet.delete(day);
-    return commitDone(s, doneSet, { sessions: { ...s.sessions, [day]: [...cur] } });
+    return commitDone(s, id, doneSet, { sessions: { ...t.sessions, [day]: [...cur] } });
   });
 }
 
-export function setDayDone(day: number, done: boolean) {
+export function setDayDone(day: number, done: boolean, id: TrackId = 'personal') {
   update((s) => {
-    const doneSet = new Set(s.done);
+    const t = getTrack(s, id);
+    if (!t) return {};
+    const doneSet = new Set(t.done);
     done ? doneSet.add(day) : doneSet.delete(day);
-    const sessions = { ...s.sessions };
+    const sessions = { ...t.sessions };
     delete sessions[day];
-    return commitDone(s, doneSet, { sessions });
+    return commitDone(s, id, doneSet, { sessions });
   });
+}
+
+export function setCatchPlan(plan: CatchPlan | null, id: TrackId = 'personal') {
+  update((s) => patchTrack(s, id, { catchPlan: plan }));
 }
 
 /** Valide le morceau de rattrapage du jour. Renvoie true si le jour rattrapé est terminé. */
-export function readCatchUp(): boolean {
-  const plan = state.catchPlan;
+export function readCatchUp(id: TrackId = 'personal'): boolean {
+  const plan = getTrack(state, id)?.catchPlan;
   if (!plan) return false;
   const partsDone = plan.partsDone + 1;
   if (partsDone >= plan.parts) {
-    setDayDone(plan.day, true);
-    update({ catchPlan: null });
+    setDayDone(plan.day, true, id);
+    setCatchPlan(null, id);
     return true;
   }
-  update({ catchPlan: { ...plan, partsDone, lastDay: todayISO() } });
+  setCatchPlan({ ...plan, partsDone, lastDay: todayISO() }, id);
   return false;
 }
 
-/** Vrai si le khatam en cours a déjà un début de lecture (un jour terminé ou une séance cochée). */
-export const hasProgress = (s: State = state) => s.done.length > 0 || Object.values(s.sessions).some((x) => x.length > 0);
+/** Vrai si le khatam a déjà un début de lecture (un jour terminé ou une séance cochée). */
+export const hasProgress = (s: State = state, id: TrackId = 'personal') => {
+  const t = getTrack(s, id);
+  return !!t && (t.done.length > 0 || Object.values(t.sessions).some((x) => x.length > 0));
+};
 
 /** Le khatam en cours, tel qu'on le range dans l'historique s'il est interrompu (null s'il n'a pas commencé ou s'il est terminé). */
 function interruptedEntry(s: State): HistoryItem | null {
@@ -344,9 +441,99 @@ export function setReminderTime(programmeId: string, index: number, time: string
  * qui n'ont pas encore commencé et dont la date n'a pas été modifiée suivent la nouvelle date.
  */
 export function syncRamadanStart() {
-  const s = state, k = s.khatam;
-  const target = ramadanStart();
-  if (!k || k.kind !== 'ramadan' || !k.followsConfig || k.plannedStart || k.start === target) return;
-  if (daysBetween(todayISO(), k.start) <= 0) return; // déjà commencé : on ne change plus rien
-  update({ khatam: { ...k, start: target } });
+  const s = state, target = ramadanStart(), today = todayISO();
+  const k = s.khatam;
+  if (k && k.kind === 'ramadan' && k.followsConfig && !k.plannedStart && k.start !== target && daysBetween(today, k.start) > 0) {
+    update({ khatam: { ...k, start: target } });
+  }
+  const r = state.ramadan;
+  if (r && r.khatam.followsConfig && r.khatam.start !== target && (daysBetween(today, r.khatam.start) > 0 || isTestRamadan(r))) {
+    update({ ramadan: { ...r, khatam: { ...r.khatam, start: target } } });
+  }
+}
+
+// ---- Khatam du Ramadan ----
+
+const isTestRamadan = (r: RamadanState) => r.khatam.id.endsWith('-essai');
+
+/** Identifiant du khatam du Ramadan de cette année (ou du Ramadan simulé). */
+export const currentRamadanId = () => `ramadan-${ramadanStart()}${ramadanTest() ? '-essai' : ''}`;
+
+/** Le khatam qu'on lit en ce moment : celui du Ramadan pendant le mois (si on l'a rejoint), sinon le personnel (s'il n'est pas en pause). */
+export function activeTrackId(s: State = state): TrackId | null {
+  if (ramadanActive(s)) return 'ramadan';
+  return s.khatam && !isPaused(s) ? 'personal' : null;
+}
+
+/** Rejoint le khatam du Ramadan : 29 jours. Le khatam personnel sera en pause pendant le mois. */
+export function joinRamadan() {
+  update((s) => {
+    if (s.ramadan) return {};
+    const start = ramadanStart();
+    return {
+      ramadan: {
+        khatam: { id: currentRamadanId(), kind: 'ramadan', name: ramadanName(), start, days: RAMADAN_KHATAM_DAYS, followsConfig: true },
+        done: [], sessions: {}, catchPlan: null, joinedOn: todayISO(),
+      },
+    };
+  });
+}
+
+/** La pause du khatam personnel, figée jusqu'à `to` (inclus), ajoutée à ses pauses. */
+function freezePause(s: State, to: string): Partial<State> {
+  const p = livePause(s);
+  if (!p || !s.khatam) return {};
+  const end = earlier(p.to, to);
+  if (end < p.from) return {};
+  return { khatam: { ...s.khatam, pauses: [...(s.khatam.pauses ?? []), { ...p, to: end }] } };
+}
+
+/** Quitte le khatam du Ramadan avant la fin : le khatam personnel reprend dès demain. */
+export function leaveRamadan() {
+  update((s) => {
+    const r = s.ramadan;
+    if (!r) return {};
+    const k = r.khatam;
+    const history = r.done.length > 0 && !k.finishedOn
+      ? [{ id: k.id, name: k.name, kind: k.kind, start: k.start, days: k.days, doneDays: r.done.length, end: todayISO(), status: 'stopped' as const }, ...s.history]
+      : s.history;
+    return { ...freezePause(s, todayISO()), history, ramadan: null };
+  });
+}
+
+/**
+ * Après le dernier jour du Ramadan : le khatam du Ramadan s'arrête (les jours non lus disparaissent),
+ * il passe dans l'historique, un message s'affiche, et le khatam personnel reprend.
+ */
+export function closeRamadanIfOver() {
+  const s = state, r = s.ramadan;
+  if (!r || daysBetween(ramadanEnd(), todayISO()) <= 0) return;
+  const k = r.khatam, finished = !!k.finishedOn, test = isTestRamadan(r);
+  const history = finished ? s.history
+    : [{ id: k.id, name: k.name, kind: k.kind, start: k.start, days: k.days, doneDays: r.done.length, end: ramadanEnd(), status: 'stopped' as const }, ...s.history.filter((h) => h.id !== k.id)];
+  update({
+    ...freezePause(s, ramadanEnd()),
+    history,
+    ramadan: null,
+    ramadanEnded: { name: k.name, doneDays: r.done.length, days: k.days, finished, test },
+  });
+}
+
+/** Outils de test : simule un Ramadan qui commence à `start` (sur ce téléphone seulement), ou arrête la simulation. */
+export function simulateRamadan(start: string | null) {
+  setRamadanTest(start);
+  if (start === null) {
+    update((s) => ({
+      ramadan: s.ramadan && isTestRamadan(s.ramadan) ? null : s.ramadan,
+      history: s.history.filter((h) => !h.id.endsWith('-essai')),
+      khatam: s.khatam ? { ...s.khatam, pauses: (s.khatam.pauses ?? []).filter((p) => !p.test) } : null,
+      ramadanEnded: s.ramadanEnded?.test ? null : s.ramadanEnded,
+      notified: s.notified.filter((n) => !n.endsWith('-essai')),
+      hideRamadanBanner: null,
+    }));
+    return;
+  }
+  const r = state.ramadan;
+  if (r && isTestRamadan(r)) update({ ramadan: { ...r, khatam: { ...r.khatam, start } } });
+  closeRamadanIfOver();
 }

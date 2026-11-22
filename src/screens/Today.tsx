@@ -1,26 +1,29 @@
-import { useStore, update, currentDay, toggleSession, setDayDone, readCatchUp, startTrial, todayISO, formatDate, endDate, State } from '../store';
+import { useStore, update, currentDay, toggleSession, setDayDone, readCatchUp, setCatchPlan, startTrial, todayISO, formatDate, endDate, getTrack, isPaused, pauseEnd, ramadanActive, activeTrackId, addDays, State, TrackId } from '../store';
+import { ramadanEnd, useConfig } from '../config';
 import { programmeById, sessionsFor } from '../data/programmes';
 import { portion, portionPages, juzTitle, arabicName, pagesLabel, dayLabel, pageSpan, isPageStart, refShort, splitEqual, sectionEnd, pn, wholeJuz } from '../data/khatam';
-import { TOTAL_PAGES } from '../data/quran';
+import { TOTAL_PAGES, juzOf } from '../data/quran';
 import { toast } from '../ui';
 import { InstallCard } from './InstallCard';
 import { RamadanBanner } from './RamadanBanner';
 
-export function streak(s: State) {
-  if (!s.khatam) return 0;
-  const day = Math.min(currentDay(s), s.khatam.days);
+export function streak(s: State, id: TrackId | null = activeTrackId(s)) {
+  const t = id ? getTrack(s, id) : null;
+  if (!t || !id) return 0;
+  const day = Math.min(currentDay(s, id), t.khatam.days);
   let n = 0;
-  for (let d = s.done.includes(day) ? day : day - 1; d > 0 && s.done.includes(d); d--) n++;
+  for (let d = t.done.includes(day) ? day : day - 1; d > 0 && t.done.includes(d); d--) n++;
   return n;
 }
 
-function pagesRead(s: State, day: number) {
-  if (!s.khatam) return 0;
-  const N = s.khatam.days;
+function pagesRead(s: State, id: TrackId, day: number) {
+  const t = getTrack(s, id);
+  if (!t) return 0;
+  const N = t.khatam.days;
   let pages = 0;
-  for (const d of s.done) { const [a, b] = portion(N, d); pages += portionPages(a, b); }
-  if (day >= 1 && day <= N && !s.done.includes(day)) {
-    const checked = new Set(s.sessions[day] ?? []);
+  for (const d of t.done) { const [a, b] = portion(N, d); pages += portionPages(a, b); }
+  if (day >= 1 && day <= N && !t.done.includes(day)) {
+    const checked = new Set(t.sessions[day] ?? []);
     for (const x of sessionsFor(programmeById(s.programmeId), portion(N, day))) if (checked.has(x.index)) pages += x.pages;
   }
   return Math.min(Math.round(pages), TOTAL_PAGES);
@@ -32,25 +35,62 @@ function dayName(N: number, d: number) {
   return t ? t.toLowerCase() : `jour ${d}`;
 }
 
+/** « juz 5 → 6 » ou « juz 5 » pour une portion. */
+const juzSpan = (a: number, b: number) => { const x = juzOf(a), y = juzOf(b); return x === y ? `juz ${x}` : `juz ${x} → ${y}`; };
+
 const pagesRange = (a: number, b: number) => { const [x, y] = pageSpan(a, b); return x === y ? `p. ${x}` : `p. ${x}–${y}`; };
 
-type Props = { openReader: (abs?: number) => void; onNewKhatam: (choice?: 'ramadan') => void };
+type Props = { openReader: (abs?: number) => void; onNewKhatam: () => void };
 
 export function Today(props: Props) {
+  const s = useStore();
+  useConfig();
+  const r = s.ramadan;
+  const rDay = currentDay(s, 'ramadan');
+  const paused = isPaused(s);
   return (
     <>
-      <RamadanBanner onOpen={() => props.onNewKhatam('ramadan')} />
-      <TodayMain {...props} />
+      {s.ramadanEnded && (
+        <div class="card ramadan-end">
+          <h3>{s.ramadanEnded.finished ? `${s.ramadanEnded.name} : khatam terminé` : `${s.ramadanEnded.name} est terminé`}</h3>
+          <p>{s.ramadanEnded.finished
+            ? "Machallah, vous avez lu le Coran en entier pendant ce Ramadan. Qu'Allah l'accepte de vous."
+            : `Vous avez lu ${s.ramadanEnded.doneDays} jour${s.ramadanEnded.doneDays > 1 ? 's' : ''} sur ${s.ramadanEnded.days}. Vous n'avez pas pu terminer ce khatam du Ramadan : qu'Allah vous permette de le compléter l'année prochaine.`}</p>
+          {s.khatam && !s.khatam.finishedOn && <p class="note">Votre khatam personnel reprend là où vous l'aviez laissé.</p>}
+          <button class="ghost" style="justify-self:start" onClick={() => update({ ramadanEnded: null })}>Fermer</button>
+        </div>
+      )}
+      <RamadanBanner />
+      {r && rDay < 1 && (
+        <div class="card ramadan-soon">
+          <h3>🌙 {r.khatam.name} · J − {1 - rDay}</h3>
+          <p>Vous avez rejoint le khatam du Ramadan : le Coran en 29 jours, à partir du {formatDate(r.khatam.start)}, selon l'annonce de la lune.</p>
+          {s.khatam && !s.khatam.finishedOn && <p class="note">Votre khatam personnel continue jusque-là, puis il sera en pause pendant le Ramadan.</p>}
+        </div>
+      )}
+      {r && ramadanActive(s) && <TrackCard id="ramadan" {...props} />}
+      {paused ? (
+        <div class="card">
+          <h3>{s.khatam!.name} · en pause</h3>
+          <p>Votre khatam personnel est en pause pendant le Ramadan. Il reprendra le {formatDate(addDays(pauseEnd(s)!, 1))}, là où vous l'avez laissé.</p>
+        </div>
+      ) : (
+        <TrackCard id="personal" {...props} />
+      )}
+      <InstallCard />
     </>
   );
 }
 
-function TodayMain({ openReader, onNewKhatam }: Props) {
+function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
   const s = useStore();
-  const k = s.khatam;
+  const t = getTrack(s, id);
+  const k = t?.khatam ?? null;
+  const isRamadan = id === 'ramadan';
 
   // ---- Pas de khatam en cours ----
   if (!k) {
+    if (isRamadan) return null;
     const stopped = s.history.some((x) => x.status === 'stopped');
     return (
       <>
@@ -62,14 +102,14 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
         </div>
         {stopped && <p class="note">Vous pouvez aussi reprendre un khatam interrompu depuis l'onglet Programme, dans l'historique.</p>}
         {s.bookmark && <button class="link" onClick={() => openReader()}>Reprendre la lecture au marque-page</button>}
-        <InstallCard />
       </>
     );
   }
 
   const N = k.days;
-  const day = currentDay(s);
-  const finished = !!k.finishedOn || s.done.length >= N;
+  const day = currentDay(s, id);
+  const tDone = t!.done, tSessions = t!.sessions;
+  const finished = !!k.finishedOn || tDone.length >= N;
 
   // ---- Avant le début ----
   if (day < 1) {
@@ -87,7 +127,6 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
           <button class="btn" onClick={() => { startTrial(); toast("C'est parti : jour 1 aujourd'hui"); }}>Commencer dès aujourd'hui</button>
         </div>
         <p class="note">Vous pourrez revenir à la date prévue dans l'onglet Programme.</p>
-        <InstallCard />
       </>
     );
   }
@@ -97,12 +136,11 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
     return (
       <>
         <div class="card">
-          <h3>Khatam terminé, machallah ✓</h3>
+          <h3>{isRamadan ? 'Khatam du Ramadan terminé, machallah ✓' : 'Khatam terminé, machallah ✓'}</h3>
           <p>{k.name} · {N} jours{k.finishedOn ? `, terminé le ${formatDate(k.finishedOn)}` : ''}. Qu'Allah l'accepte de vous.</p>
-          <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatam</button>
+          {!isRamadan && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatam</button>}
         </div>
-        <button class="link" onClick={() => openReader()}>Relire le Coran</button>
-        <InstallCard />
+        {!isRamadan && <button class="link" onClick={() => openReader()}>Relire le Coran</button>}
       </>
     );
   }
@@ -113,11 +151,11 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
   const [a, b] = portion(N, cur);
   const sessions = over ? [] : sessionsFor(prog, [a, b]);
   const total = portionPages(a, b);
-  const done = s.done.includes(cur);
-  const checked = new Set(s.sessions[cur] ?? []);
+  const done = tDone.includes(cur);
+  const checked = new Set(tSessions[cur] ?? []);
   const readToday = done ? total : sessions.filter((x) => checked.has(x.index)).reduce((t, x) => t + x.pages, 0);
-  const missed = Array.from({ length: Math.min(day - 1, N) }, (_, i) => i + 1).filter((d) => !s.done.includes(d));
-  const plan = s.catchPlan;
+  const missed = Array.from({ length: Math.min(day - 1, N) }, (_, i) => i + 1).filter((d) => !tDone.includes(d));
+  const plan = t!.catchPlan;
   const catchDoneToday = plan?.lastDay === todayISO();
   const whole = wholeJuz(a, b);
   const showRange = !whole;
@@ -131,7 +169,7 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
   const onSession = (index: number) => {
     const unchecking = done || checked.has(index);
     const completes = !unchecking && checked.size + 1 >= sessions.length;
-    toggleSession(cur, index, sessions.length);
+    toggleSession(cur, index, sessions.length, id);
     toast(completes ? `Machallah ! ${dayName(N, cur)[0].toUpperCase() + dayName(N, cur).slice(1)} terminé` : unchecking ? 'Séance décochée' : 'Séance validée, machallah !');
   };
 
@@ -143,8 +181,8 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
     const i = Math.min(plan.parts - 1, catchDoneToday ? plan.partsDone - 1 : plan.partsDone);
     const from = starts[i], to = sectionEnd(starts, i, pb);
     const onCatch = () => {
-      if (catchDoneToday) { update({ catchPlan: { ...plan, partsDone: plan.partsDone - 1, lastDay: null } }); return; }
-      const finishedDay = readCatchUp();
+      if (catchDoneToday) { setCatchPlan({ ...plan, partsDone: plan.partsDone - 1, lastDay: null }, id); return; }
+      const finishedDay = readCatchUp(id);
       toast(finishedDay ? `Machallah ! ${dayName(N, plan.day)} rattrapé` : `Rattrapage : ${plan.partsDone + 1}/${plan.parts} du ${dayName(N, plan.day)}`);
     };
     catchRow = (
@@ -161,16 +199,19 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
     <>
       {over ? (
         <div class="card">
-          <h3>La période est terminée</h3>
-          <p>{s.done.length} jour{s.done.length > 1 ? 's' : ''} lu{s.done.length > 1 ? 's' : ''} sur {N}. Vous pouvez encore rattraper les jours manquants, ou commencer un nouveau khatam.</p>
+          <h3>{isRamadan ? `${k.name} · dernier jour pour rattraper` : 'La période est terminée'}</h3>
+          <p>{tDone.length} jour{tDone.length > 1 ? 's' : ''} lu{tDone.length > 1 ? 's' : ''} sur {N}. {isRamadan
+            ? `Vous pouvez rattraper les jours manquants jusqu'au ${formatDate(ramadanEnd())}, dernier jour du Ramadan.`
+            : 'Vous pouvez encore rattraper les jours manquants, ou commencer un nouveau khatam.'}</p>
           {catchRow && <ul class="sessions plain">{catchRow}</ul>}
-          <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatam</button>
+          {!isRamadan && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatam</button>}
         </div>
       ) : (
-        <div class="today">
+        <div class={`today ${isRamadan ? 'ramadan' : ''}`}>
+          {isRamadan && <span class="track-name">🌙 {k.name}</span>}
           <div class="row"><span class="small">Jour {cur} sur {N}</span><span class="small">{pagesRange(a, b)}</span></div>
           <div class="row"><span class="juz">{juzTitle(a, b) ?? `Jour ${cur}`}</span><span class="ar">{arabicName(a, b)}</span></div>
-          {showRange && <span class="small">De {refShort(a)} à {refShort(b)} · {pagesLabel(total)}</span>}
+          {showRange && <span class="small">{juzSpan(a, b)} · de {refShort(a)} à {refShort(b)} · {pagesLabel(total)}</span>}
           <div>
             <div class="row small" style="margin-bottom:6px"><span>Pages lues aujourd'hui</span><span>{pn(readToday)}/{pn(total)}</span></div>
             <div class="bar"><i style={{ width: `${(readToday / total) * 100}%` }} /></div>
@@ -194,7 +235,7 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
             })}
             {catchRow}
           </ul>
-          <button class={done ? 'btn soft' : 'btn'} onClick={() => { setDayDone(cur, !done); if (!done) toast('Machallah ! Jour terminé'); }}>
+          <button class={done ? 'btn soft' : 'btn'} onClick={() => { setDayDone(cur, !done, id); if (!done) toast('Machallah ! Jour terminé'); }}>
             {done ? 'Annuler « jour terminé »' : 'Jour terminé'}
           </button>
           <div class="links">
@@ -209,7 +250,7 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
           <b>Rattrapage du {dayName(N, plan.day)}</b>
           <p>{plan.partsDone}/{plan.parts} morceaux lus · un morceau par jour en plus de la lecture normale</p>
           <div class="bar"><i style={{ width: `${(plan.partsDone / plan.parts) * 100}%` }} /></div>
-          <div class="opts"><button onClick={() => { update({ catchPlan: null }); toast('Rattrapage arrêté'); }}>Arrêter le rattrapage</button></div>
+          <div class="opts"><button onClick={() => { setCatchPlan(null, id); toast('Rattrapage arrêté'); }}>Arrêter le rattrapage</button></div>
         </div>
       ) : missed.length > 0 && (
         <div class="catchup">
@@ -219,7 +260,7 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
             {[1, 2, 4].map((d) => {
               const [pa, pb] = portion(N, missed[0]);
               return (
-                <button key={d} onClick={() => { update({ catchPlan: { day: missed[0], parts: d, partsDone: 0, lastDay: null } }); toast(`Rattrapage ajouté à vos séances (${d} jour${d > 1 ? 's' : ''})`); }}>
+                <button key={d} onClick={() => { setCatchPlan({ day: missed[0], parts: d, partsDone: 0, lastDay: null }, id); toast(`Rattrapage ajouté à vos séances (${d} jour${d > 1 ? 's' : ''})`); }}>
                   {d} jour{d > 1 ? 's' : ''} · +{pn(portionPages(pa, pb) / d)} p./jour
                 </button>
               );
@@ -229,11 +270,10 @@ function TodayMain({ openReader, onNewKhatam }: Props) {
       )}
 
       <div class="stats">
-        <div class="stat"><b>{s.done.length}/{N}</b><span>jours lus</span></div>
-        <div class="stat"><b>{pagesRead(s, day)}</b><span>pages sur {TOTAL_PAGES}</span></div>
-        <div class="stat"><b>{streak(s)}</b><span>jours d'affilée</span></div>
+        <div class="stat"><b>{tDone.length}/{N}</b><span>jours lus</span></div>
+        <div class="stat"><b>{pagesRead(s, id, day)}</b><span>pages sur {TOTAL_PAGES}</span></div>
+        <div class="stat"><b>{streak(s, id)}</b><span>jours d'affilée</span></div>
       </div>
-      <InstallCard />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
-import { useStore, update, currentDay, endDate, formatDate, setKhatamStart, stopTrial, stopKhatam, resumeKhatam, resumeDay, deleteHistoryItem, hasProgress } from '../store';
+import { useStore, update, currentDay, endDate, formatDate, setKhatamStart, stopTrial, stopKhatam, resumeKhatam, resumeDay, deleteHistoryItem, hasProgress, isPaused, pauseEnd, leaveRamadan, addDays } from '../store';
+import { ramadanEnd } from '../config';
 import { ramadanStart } from '../config';
 import { allProgrammes, sessionsFor, DEFAULT_CUSTOM, CUSTOM_ID, MAX_CUSTOM_SESSIONS, MOMENTS, customProgramme, sortByTime, CustomSession } from '../data/programmes';
 import { portion, dayLabel, pagesLabel, portionPages, pageSpan, juzTitle } from '../data/khatam';
@@ -19,6 +20,10 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
   const notStarted = !!k && day < 1;
   const [pending, setPending] = useState<{ id: string; action: 'resume' | 'delete' } | null>(null);
   const [stopping, setStopping] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const r = s.ramadan;
+  const rDay = currentDay(s, 'ramadan');
+  const paused = isPaused(s);
 
   const chooseProgramme = (id: string) => {
     if (id === CUSTOM_ID && !s.customProgramme.length) update({ customProgramme: DEFAULT_CUSTOM.map((x) => ({ ...x })) });
@@ -28,6 +33,27 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
 
   return (
     <>
+      {r && (
+        <>
+          <h2>Khatam du Ramadan</h2>
+          <div class="card ramadan-card">
+            <div class="row"><h3>🌙 {r.khatam.name}</h3><span class="pill">{r.khatam.finishedOn ? 'Terminé' : rDay < 1 ? 'À venir' : rDay > 29 ? 'Rattrapage' : `Jour ${rDay}/29`}</span></div>
+            <p>29 jours · environ 21 pages par jour · {r.done.length}/29 jours lus</p>
+            <p class="note">Du {formatDate(r.khatam.start)} au {formatDate(addDays(r.khatam.start, 28))}. Rattrapage possible jusqu'au {formatDate(ramadanEnd())}, dernier jour du Ramadan.</p>
+            {!r.khatam.finishedOn && !leaving && <button class="link stop-link" onClick={() => setLeaving(true)}>Quitter le khatam du Ramadan</button>}
+            {leaving && (
+              <div class="confirm">
+                <p>Quitter le khatam du Ramadan ?{s.khatam && !s.khatam.finishedOn ? ' Votre khatam personnel reprendra dès demain.' : ''}</p>
+                <div class="actions-row">
+                  <button class="btn danger-fill" onClick={() => { leaveRamadan(); setLeaving(false); toast('Khatam du Ramadan quitté'); }}>Quitter</button>
+                  <button class="ghost" onClick={() => setLeaving(false)}>Annuler</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       <h2>Mon khatam</h2>
       {!k ? (
         <div class="card">
@@ -38,9 +64,10 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
         </div>
       ) : (
         <div class="card">
-          <div class="row"><h3>{k.name}</h3><span class="pill">{finished ? 'Terminé' : day < 1 ? 'À venir' : day > N ? 'Période finie' : `Jour ${day}/${N}`}</span></div>
+          <div class="row"><h3>{k.name}</h3><span class="pill">{finished ? 'Terminé' : paused ? 'En pause' : day < 1 ? 'À venir' : day > N ? 'Période finie' : `Jour ${day}/${N}`}</span></div>
           <p>{N} jours · {dayLabel(N)}</p>
-          <p class="note">Du {formatDate(k.start)} au {formatDate(endDate(k))}</p>
+          <p class="note">Du {formatDate(k.start)} au {formatDate(endDate(k))}{(k.pauses?.length || r) ? ' (pauses du Ramadan comprises)' : ''}</p>
+          {paused && <p class="note">En pause pendant le Ramadan : il reprend le {formatDate(addDays(pauseEnd(s)!, 1))}.</p>}
           {notStarted && !trial && (
             <div class="setting">
               <div>{k.kind === 'ramadan' ? '1er jour du Ramadan' : 'Date de début'}<small>{k.kind === 'ramadan' ? "Date estimée, à ajuster selon l'annonce de la lune" : 'Modifiable jusqu\'au premier jour'}</small></div>
@@ -115,7 +142,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
                   </div>
                   {!asking && (
                     <div class="hist-actions">
-                      {h.status === 'stopped' && !active && <button class="ghost" onClick={() => setPending({ id: h.id, action: 'resume' })}>Reprendre</button>}
+                      {h.status === 'stopped' && !active && !h.id.startsWith('ramadan-') && <button class="ghost" onClick={() => setPending({ id: h.id, action: 'resume' })}>Reprendre</button>}
                       <button class="ghost danger" onClick={() => setPending({ id: h.id, action: 'delete' })}>Supprimer</button>
                     </div>
                   )}

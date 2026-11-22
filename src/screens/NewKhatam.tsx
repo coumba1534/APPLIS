@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { useStore, startKhatam, hasProgress, todayISO, addDays, daysBetween, formatDate } from '../store';
-import { ramadanStart, ramadanVisible, useConfig } from '../config';
+import { ramadanStart, useConfig } from '../config';
 import { portion, dayLabel, clampDays, MAX_DAYS, MIN_DAYS } from '../data/khatam';
 import { refText } from '../data/quran';
 import { toast } from '../ui';
@@ -29,7 +29,8 @@ export function NewKhatam({ onClose, onStarted, preselect }: { onClose: () => vo
   const s = useStore();
   useConfig();
   // Le Ramadan n'est proposé que lorsqu'il approche (ou si c'est activé à distance).
-  const choices = CHOICES.filter((c) => c.id !== 'ramadan' || ramadanVisible());
+  // Le Ramadan a son propre khatam (annoncé à l'approche) : il n'est plus proposé ici.
+  const choices = CHOICES.filter((c) => c.id !== 'ramadan');
   const first: Choice = preselect && choices.some((c) => c.id === preselect) ? preselect : choices[0].id;
   const [choice, setChoice] = useState<Choice>(first);
   const [start, setStart] = useState(first === 'ramadan' ? ramadanStart() : todayISO());

@@ -17,25 +17,38 @@ Application web installable (PWA) pour faire un **khatam du Coran pendant le Ram
 - **Fin du khatam** : écran de célébration avec des dou'a du Coran.
 - Fonctionne **hors connexion** une fois ouverte, et s'installe sur l'écran d'accueil (Android et iPhone).
 
-### Le Ramadan apparaît quand il approche
+### Le khatam du Ramadan
 
-L'appli sert toute l'année. Les fonctions du Ramadan (le choix « Ramadan » pour créer un khatam, le bandeau « Le Ramadan approche ») n'apparaissent que dans les semaines qui précèdent, pendant, et peu après le Ramadan. Cela se règle dans `public/config.json`, sans mettre l'appli à jour :
+L'appli sert toute l'année. À l'approche du Ramadan (10 jours avant la date estimée), un **khatam du Ramadan** est proposé : bandeau « Votre khatam du Ramadan est disponible », bouton **Rejoindre**, et une notification.
+
+- **29 jours**, comme dans les mosquées : 240 quarts de hizb répartis régulièrement (8 ou 9 par jour, 18 à 23 pages). Le jour 1 est le juz 1, le jour 29 le juz 30.
+- Pendant le Ramadan, le **khatam personnel est en pause** : son calendrier se décale, il reprend le lendemain du Ramadan là où on l'a laissé.
+- Les jours manqués se **rattrapent jusqu'au dernier jour du Ramadan**. À l'Aïd, les jours non lus disparaissent, un message s'affiche (« qu'Allah vous permette de le compléter l'année prochaine ») et le khatam passe dans l'historique.
+- Notifications : annonce du khatam, premier jour (« Ramadan Moubarak »), puis les rappels des séances.
+
+Tout se règle dans `public/config.json`, sans mettre l'appli à jour :
 
 ```json
 {
   "ramadan": {
     "start": "2027-02-08",
-    "showDaysBefore": 30,
+    "days": null,
+    "name": "Ramadan 1448",
+    "showDaysBefore": 10,
     "enabled": null
-  }
+  },
+  "testMode": true
 }
 ```
 
 | Réglage | Rôle |
 |---|---|
-| `start` | 1er jour du Ramadan. À corriger après l'annonce de la lune : les khatams du Ramadan pas encore commencés suivent la nouvelle date |
-| `showDaysBefore` | Nombre de jours avant le Ramadan où ses fonctions apparaissent |
-| `enabled` | `null` : automatique · `true` : toujours visible · `false` : toujours masqué |
+| `start` | 1er jour du Ramadan, date estimée (calendrier astronomique). À corriger après l'annonce de la lune : les khatams du Ramadan pas encore commencés suivent la nouvelle date |
+| `days` | Durée du mois, `29` ou `30` (`null` tant que ce n'est pas annoncé : 30 par prudence). Fixe le dernier jour de rattrapage et l'Aïd |
+| `name` | Nom affiché, par exemple « Ramadan 1448 » |
+| `showDaysBefore` | Nombre de jours avant le Ramadan où le khatam est annoncé |
+| `enabled` | `null` : automatique · `true` : annoncé tout de suite · `false` : masqué |
+| `testMode` | Affiche les **outils de test** (onglet Rappels) : simulation d'un Ramadan sur son propre téléphone (annonce, 1er jour, jour 27, dernier jour, Aïd) et envoi des notifications de test. À remettre à `false` pour le public |
 
 Pour le modifier : GitHub → `public/config.json` → icône crayon → changer la valeur → *Commit changes*. La mise en ligne prend environ une minute. L'appli relit ce fichier à chaque ouverture ; hors connexion, elle garde le dernier réglage connu.
 

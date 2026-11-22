@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useStore, currentDay, update, syncRamadanStart } from './store';
+import { useStore, currentDay, update, syncRamadanStart, closeRamadanIfOver, ramadanActive } from './store';
 import { loadConfig, useConfig } from './config';
 import { absOf, juzOf, pageOf } from './data/quran';
 import { portion } from './data/khatam';
@@ -24,7 +24,7 @@ export function App() {
   const [tab, setTabState] = useState<Tab>(() => (s.onboarded && TABS.some(([id]) => id === s.lastTab) ? s.lastTab as Tab : 'today'));
   const dayStartJuz = () => (s.khatam ? juzOf(portion(s.khatam.days, Math.min(Math.max(currentDay(s), 1), s.khatam.days))[0]) : 1);
   const [target, setTargetState] = useState<ReaderTarget>(() => s.readerTarget ?? { mode: 'juz', juz: dayStartJuz() });
-  const [newOpen, setNewOpen] = useState<null | 'any' | 'ramadan'>(null);
+  const [newOpen, setNewOpen] = useState(false);
   const config = useConfig();
   /** 'bookmark' : on ouvre Lire depuis « Reprendre au marque-page » ; 'resume' : on reprend où on en était. */
   const [start, setStart] = useState<'resume' | 'bookmark'>('resume');
@@ -32,7 +32,9 @@ export function App() {
   const setTarget = (t: ReaderTarget) => { setTargetState(t); update({ readerTarget: t }); };
   const [readerTitle, setReaderTitle] = useState<[string, string]>(['Lire', '']);
   const N = s.khatam?.days ?? 0;
-  const [finaleSeen, setFinaleSeen] = useState(!!s.khatam && s.done.length >= N);
+  // Écran de fin : affiché une fois, quand on valide le dernier jour d'un khatam (personnel ou du Ramadan).
+  const finishedIds = () => [s.khatam, s.ramadan?.khatam].filter((k) => k?.finishedOn).map((k) => k!.id);
+  const [finaleSeen, setFinaleSeen] = useState<string[]>(finishedIds);
 
   useEffect(() => { const id = startReminders(); return () => clearInterval(id); }, []);
   // Réglages à distance : à l'ouverture et chaque fois qu'on revient dans l'appli.
@@ -43,7 +45,14 @@ export function App() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
   // La date du Ramadan peut changer (annonce de la lune) : les khatams concernés suivent.
-  useEffect(() => { syncRamadanStart(); }, [config.ramadan.start]);
+  useEffect(() => { syncRamadanStart(); closeRamadanIfOver(); }, [config.ramadan.start, config.ramadan.days]);
+  // Fin du Ramadan : vérifiée à l'ouverture et quand on revient dans l'appli.
+  useEffect(() => {
+    closeRamadanIfOver();
+    const onVisible = () => { if (document.visibilityState === 'visible') closeRamadanIfOver(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
   // Hauteur de l'en-tête, pour coller la barre d'outils de lecture juste en dessous.
   const header = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -53,12 +62,11 @@ export function App() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  useEffect(() => { if (s.done.length < N) setFinaleSeen(false); }, [s.done.length, N]);
 
   const day = currentDay(s);
   const hello = `Assalamou alaykoum${s.name ? `, ${s.name}` : ''}`;
   const titles: Record<Tab, [string, string]> = {
-    today: [hello, !s.khatam ? 'Prêt pour un nouveau khatam' : day >= 1 && day <= N ? (s.khatam.kind === 'ramadan' ? `Jour ${day} du Ramadan` : `Jour ${day} sur ${N}`) : s.khatam.name],
+    today: [hello, ramadanActive(s) ? `Jour ${Math.min(currentDay(s, 'ramadan'), 29)} · ${s.ramadan!.khatam.name}` : !s.khatam ? 'Prêt pour un nouveau khatam' : day >= 1 && day <= N ? (s.khatam.kind === 'ramadan' ? `Jour ${day} du Ramadan` : `Jour ${day} sur ${N}`) : s.khatam.name],
     read: readerTitle,
     plan: ['Mon programme', 'Mon khatam, à mon rythme'],
     group: ['Mon groupe', 'On avance ensemble'],
@@ -94,9 +102,9 @@ export function App() {
         </div>
       </header>
       <main>
-        {tab === 'today' && <Today openReader={openReader} onNewKhatam={(c) => setNewOpen(c ?? 'any')} />}
+        {tab === 'today' && <Today openReader={openReader} onNewKhatam={() => setNewOpen(true)} />}
         {tab === 'read' && <Reader target={target} setTarget={setTarget} onTitle={setReaderTitle} start={start} />}
-        {tab === 'plan' && <Programme onNewKhatam={() => setNewOpen('any')} />}
+        {tab === 'plan' && <Programme onNewKhatam={() => setNewOpen(true)} />}
         {tab === 'group' && <Group />}
         {tab === 'bell' && <Reminders />}
       </main>
@@ -106,8 +114,8 @@ export function App() {
         ))}
       </nav>
       {!s.onboarded && <Onboarding onDone={() => setTab('today')} />}
-      {s.khatam && s.done.length >= N && !finaleSeen && <Finale khatam={s.khatam} onClose={() => setFinaleSeen(true)} />}
-      {newOpen && <NewKhatam preselect={newOpen === 'ramadan' ? 'ramadan' : undefined} onClose={() => setNewOpen(null)} onStarted={() => { setTab('today'); window.scrollTo(0, 0); }} />}
+      {[s.ramadan?.khatam, s.khatam].filter((k) => k?.finishedOn && !finaleSeen.includes(k.id)).slice(0, 1).map((k) => <Finale khatam={k!} onClose={() => setFinaleSeen([...finaleSeen, k!.id])} />)}
+      {newOpen && <NewKhatam onClose={() => setNewOpen(false)} onStarted={() => { setTab('today'); window.scrollTo(0, 0); }} />}
       <Toast />
     </div>
   );

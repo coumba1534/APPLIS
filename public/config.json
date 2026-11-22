@@ -1,7 +1,10 @@
 {
   "ramadan": {
     "start": "2027-02-08",
-    "showDaysBefore": 30,
+    "days": null,
+    "name": "Ramadan 1448",
+    "showDaysBefore": 10,
     "enabled": null
-  }
+  },
+  "testMode": true
 }

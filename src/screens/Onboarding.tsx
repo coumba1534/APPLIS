@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { update, getState, newId, todayISO } from '../store';
-import { ramadanStart, ramadanVisible } from '../config';
+import { ramadanStart } from '../config';
 import { APP_NAME } from '../brand';
 import { allProgrammes, sessionsFor } from '../data/programmes';
 import { portion, dayLabel, pagesLabel } from '../data/khatam';
@@ -13,8 +13,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState(init.name);
   const [prog, setProg] = useState(init.programmeId);
   const [code, setCode] = useState(init.groupCode);
-  const showRamadan = ramadanVisible();
-  const [dur, setDur] = useState<'ramadan' | '30' | '60' | '90'>(showRamadan ? 'ramadan' : '30');
+  const [dur, setDur] = useState<'ramadan' | '30' | '60' | '90'>('30');
   const days = dur === 'ramadan' ? 30 : Number(dur);
   const progs = allProgrammes().filter((p) => p.id !== 'custom');
   const chosen = progs.find((p) => p.id === prog) ?? progs[0];
@@ -39,7 +38,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     <>
       <h1>Quelle durée pour votre khatam ?</h1>
       <p>Le Coran est découpé en parts égales, une par jour. Vous pourrez aussi choisir une durée personnalisée dans l'onglet Programme.</p>
-      {([['ramadan', 'Ramadan', 30], ['30', '1 mois', 30], ['60', '2 mois', 60], ['90', '3 mois', 90]] as const).filter(([id]) => id !== 'ramadan' || showRamadan).map(([id, title, d]) => (
+      {([['ramadan', 'Ramadan', 30], ['30', '1 mois', 30], ['60', '2 mois', 60], ['90', '3 mois', 90]] as const).filter(([id]) => id !== 'ramadan').map(([id, title, d]) => (
         <button class="choice" aria-pressed={dur === id} onClick={() => setDur(id)}>
           <b>{title} · {d} jours</b><small>{dayLabel(d)}</small>
         </button>
