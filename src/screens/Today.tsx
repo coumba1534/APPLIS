@@ -1,11 +1,12 @@
 import { useStore, update, currentDay, toggleSession, setDayDone, readCatchUp, setCatchPlan, startTrial, todayISO, formatDate, endDate, getTrack, isPaused, pauseEnd, ramadanActive, activeTrackId, addDays, State, TrackId } from '../store';
 import { ramadanEnd, useConfig } from '../config';
-import { programmeById, sessionsFor } from '../data/programmes';
+import { programmeOf, sessionsFor } from '../data/programmes';
 import { portion, portionPages, juzTitle, arabicName, pagesLabel, dayLabel, pageSpan, isPageStart, refShort, splitEqual, sectionEnd, pn, wholeJuz } from '../data/khatam';
 import { TOTAL_PAGES, juzOf } from '../data/quran';
 import { toast } from '../ui';
 import { InstallCard } from './InstallCard';
 import { RamadanBanner } from './RamadanBanner';
+import { Moon } from './RamadanArt';
 
 export function streak(s: State, id: TrackId | null = activeTrackId(s)) {
   const t = id ? getTrack(s, id) : null;
@@ -24,7 +25,7 @@ function pagesRead(s: State, id: TrackId, day: number) {
   for (const d of t.done) { const [a, b] = portion(N, d); pages += portionPages(a, b); }
   if (day >= 1 && day <= N && !t.done.includes(day)) {
     const checked = new Set(t.sessions[day] ?? []);
-    for (const x of sessionsFor(programmeById(s.programmeId), portion(N, day))) if (checked.has(x.index)) pages += x.pages;
+    for (const x of sessionsFor(programmeOf(s, id), portion(N, day))) if (checked.has(x.index)) pages += x.pages;
   }
   return Math.min(Math.round(pages), TOTAL_PAGES);
 }
@@ -147,7 +148,7 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
     );
   }
 
-  const prog = programmeById(s.programmeId);
+  const prog = programmeOf(s, id);
   const over = day > N;
   const cur = Math.min(day, N);
   const [a, b] = portion(N, cur);
@@ -215,7 +216,12 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
         </div>
       ) : (
         <div class={`today ${isRamadan ? 'ramadan' : ''}`}>
-          {isRamadan && <span class="track-name">🌙 {k.name}</span>}
+          {isRamadan && (
+            <div class="rm-head">
+              <span class="track-name">{k.name} · {tDone.length}/29 nuits lues</span>
+              <span class="rm-moon" title={`${tDone.length} jours lus sur 29`}><Moon k={tDone.length / 29} size={54} /></span>
+            </div>
+          )}
           <div class="row"><span class="small">Jour {cur} sur {N}</span><span class="small">{pagesRange(a, b)}</span></div>
           <div class="row"><span class="juz">{juzTitle(a, b) ?? `Jour ${cur}`}</span><span class="ar">{arabicName(a, b)}</span></div>
           {showRange && <span class="small">{juzSpan(a, b)} · de {refShort(a)} à {refShort(b)} · {pagesLabel(total)}</span>}
@@ -245,6 +251,7 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
           <button class={done ? 'btn soft' : 'btn'} onClick={() => { setDayDone(cur, !done, id); if (!done) toast('Machallah ! Jour terminé'); }}>
             {done ? 'Annuler « jour terminé »' : 'Jour terminé'}
           </button>
+          {isRamadan && s.ramadan?.niyya && <div class="rm-niyya">{s.ramadan.niyya}</div>}
           <div class="links">
             <button class="link" onClick={() => openReader(resume.from)}>{resume.label}</button>
             {s.bookmark && <button class="link" onClick={() => openReader()}>Reprendre au marque-page</button>}

@@ -11,6 +11,8 @@ import { Group } from './screens/Group';
 import { Reminders } from './screens/Reminders';
 import { Onboarding } from './screens/Onboarding';
 import { Finale } from './screens/Finale';
+import { RamadanWelcome } from './screens/RamadanWelcome';
+import { RamadanFinale } from './screens/RamadanFinale';
 import { NewKhatam } from './screens/NewKhatam';
 import { startReminders } from './device';
 import { isDark, toggleTheme } from './theme';
@@ -114,7 +116,10 @@ export function App() {
         ))}
       </nav>
       {!s.onboarded && <Onboarding onDone={() => setTab('today')} />}
-      {[s.ramadan?.khatam, s.khatam].filter((k) => k?.finishedOn && !finaleSeen.includes(k.id)).slice(0, 1).map((k) => <Finale khatam={k!} onClose={() => setFinaleSeen([...finaleSeen, k!.id])} />)}
+      {[s.ramadan?.khatam, s.khatam].filter((k) => k?.finishedOn && !finaleSeen.includes(k.id)).slice(0, 1).map((k) => (k!.kind === 'ramadan' && k!.id === s.ramadan?.khatam.id
+        ? <RamadanFinale khatam={k!} onClose={() => setFinaleSeen([...finaleSeen, k!.id])} onNewKhatam={() => setNewOpen(true)} />
+        : <Finale khatam={k!} onClose={() => setFinaleSeen([...finaleSeen, k!.id])} />))}
+      {s.onboarded && s.ramadan && !s.ramadan.welcomed && <RamadanWelcome />}
       {newOpen && <NewKhatam onClose={() => setNewOpen(false)} onStarted={() => { setTab('today'); window.scrollTo(0, 0); }} />}
       <Toast />
     </div>

@@ -1,7 +1,7 @@
 // Installation sur l'écran d'accueil et notifications.
 import { getState, todayISO, update, currentDay, getTrack, activeTrackId, closeRamadanIfOver, currentRamadanId, formatDate } from './store';
 import { ramadanVisible, ramadanName, ramadanStart } from './config';
-import { programmeById, sessionsFor } from './data/programmes';
+import { programmeOf, sessionsFor } from './data/programmes';
 import { portion, juzTitle, pagesLabel } from './data/khatam';
 
 export const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -79,6 +79,9 @@ export function startReminders() {
     const doneThisYear = s.history.some((h) => h.id === rid);
     if (ramadanVisible() && !s.ramadan && !doneThisYear) once(`annonce:${rid}`, ramadanNotifications.available());
     if (s.ramadan && s.ramadan.khatam.start === date) once(`debut:${s.ramadan.khatam.id}`, ramadanNotifications.firstDay());
+    // Veille des 10 dernières nuits (jour 20), en fin de journée.
+    if (s.ramadan && s.ramadan.extras?.last10 !== false && currentDay(s, 'ramadan') === 20 && new Date().getHours() >= 17)
+      once(`dix:${s.ramadan.khatam.id}`, { title: 'Les 10 dernières nuits commencent ce soir 🌙', body: 'La dernière ligne droite de votre khatam du Ramadan. Courage, vous y êtes presque !' });
 
     // Rappels des séances du khatam qu'on lit en ce moment (celui du Ramadan pendant le mois).
     const id = activeTrackId(s);
@@ -89,7 +92,7 @@ export function startReminders() {
     if (day < 1 || day > N || t.khatam.finishedOn) return;
     const now = new Date();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const prog = programmeById(s.programmeId);
+    const prog = programmeOf(s, id);
     const doneToday = t.done.includes(day);
     const checked = new Set(t.sessions[day] ?? []);
     const prefix = id === 'ramadan' ? '🌙 ' : '';
@@ -101,7 +104,8 @@ export function startReminders() {
           due.push({ key: `${id}:s${sess.index}`, title: `${prefix}${sess.label} · ${juzTitle(...portion(N, day)) ?? `Jour ${day}`}`, body: `${sess.detail ? sess.detail + ', ' : ''}pages ${sess.pageFrom} à ${sess.pageTo} (${pagesLabel(sess.pages)}). Bismillah !` });
       }
     }
-    if (s.reminders.lateEvening && !doneToday && nowMin >= 21 * 60 && nowMin < 23 * 60)
+    const evening = id === 'ramadan' ? s.ramadan?.extras?.evening !== false : s.reminders.lateEvening;
+    if (evening && !doneToday && nowMin >= (id === 'ramadan' ? 22 * 60 + 30 : 21 * 60) && nowMin < 23 * 60 + 30)
       due.push({ key: `${id}:late`, title: `${prefix}Jour ${day} pas encore terminé`, body: 'Il reste encore un peu de temps ce soir, courage !' });
     for (const d of due) {
       const key = `${date}:${d.key}`;

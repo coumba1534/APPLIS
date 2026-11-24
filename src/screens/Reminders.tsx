@@ -1,8 +1,8 @@
 import { useState } from 'preact/hooks';
-import { useStore, update, currentDay, setReminderTime, activeTrackId, getTrack, simulateRamadan, formatDate, addDays, todayISO } from '../store';
+import { useStore, update, currentDay, setReminderTime, activeTrackId, getTrack, simulateRamadan, setRamadanSetup, formatDate, addDays, todayISO } from '../store';
 import { useConfig, ramadanTest, ramadanEnd } from '../config';
 import { ramadanNotifications } from '../device';
-import { programmeById, sessionsFor } from '../data/programmes';
+import { programmeOf, sessionsFor } from '../data/programmes';
 import { portion, pagesLabel } from '../data/khatam';
 import { askNotifications, notificationPermission, notificationsSupported, notify, timeFor, isIOS, isStandalone } from '../device';
 import { toast } from '../ui';
@@ -11,9 +11,9 @@ import { APP_NAME } from '../brand';
 export function Reminders() {
   const s = useStore();
   const [perm, setPerm] = useState(notificationPermission());
-  const prog = programmeById(s.programmeId);
   const config = useConfig();
   const id = activeTrackId(s) ?? 'personal';
+  const prog = programmeOf(s, id);
   const N = getTrack(s, id)?.khatam.days ?? 30;
   const day = Math.min(Math.max(currentDay(s, id), 1), N);
   const sessions = sessionsFor(prog, portion(N, day));
@@ -96,6 +96,8 @@ function TestTools() {
       </div>
       <div class="actions-row">
         <button class="ghost" onClick={sendAll}>Envoyer les notifications de test</button>
+        {s.ramadan && <button class="ghost" onClick={() => { setRamadanSetup({ welcomed: false }); toast("L'accueil du Ramadan va s'ouvrir"); }}>Revoir l'accueil du Ramadan</button>}
+        {s.ramadan && t && <button class="ghost" onClick={() => { const today = Math.min(Math.max(currentDay(s, 'ramadan'), 1), 29); update({ ramadan: { ...s.ramadan!, done: Array.from({ length: 29 }, (_, i) => i + 1).filter((d) => d !== today), sessions: {} } }); toast("28 jours marqués comme lus : validez celui d'aujourd'hui"); }}>Marquer 28 jours lus</button>}
         {t && <button class="ghost danger" onClick={() => { simulateRamadan(null); toast('Simulation arrêtée'); }}>Arrêter la simulation</button>}
       </div>
     </div>

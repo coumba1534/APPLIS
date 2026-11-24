@@ -3,6 +3,7 @@
 import { QUARTERS, pagesBetween, pageOf } from './quran';
 import { splitByFractions, sectionEnd, wholeJuz } from './khatam';
 import { getState } from '../store';
+import type { State, TrackId, RamadanState } from '../store';
 
 export interface SessionDef {
   label: string;
@@ -143,4 +144,56 @@ export function sessionsFor(prog: Programme, [a, b]: [number, number]): Session[
 /** Taille de chaque séance pour une portion donnée : « 5 pages », « ≈ 2,5 pages »… */
 export function sessionSizes(prog: Programme, p: [number, number]) {
   return sessionsFor(prog, p).map((s) => s.pages);
+}
+
+// ---- Rythmes du Ramadan (indépendants du programme habituel) ----
+
+/** Moments de la journée pendant le Ramadan, dans l'ordre, avec une heure de rappel suggérée. */
+export const RAMADAN_MOMENTS: { label: string; time: string }[] = [
+  { label: 'Après le suhur', time: '04:45' },
+  { label: 'Après Fajr', time: '05:50' },
+  { label: 'Matinée', time: '09:30' },
+  { label: 'Après Dhuhr', time: '14:00' },
+  { label: 'Après Asr', time: '17:15' },
+  { label: "Avant l'iftar", time: '18:00' },
+  { label: 'Après Maghrib', time: '19:20' },
+  { label: 'Après Isha', time: '20:40' },
+  { label: 'Après les Tarawih', time: '22:15' },
+  { label: 'Avant de dormir', time: '22:45' },
+];
+export const DEFAULT_RAMADAN_MOMENTS = ['Après le suhur', "Avant l'iftar", 'Après les Tarawih'];
+export const RAMADAN_CUSTOM_ID = 'r-perso';
+
+const moment = (label: string) => RAMADAN_MOMENTS.find((m) => m.label === label) ?? { label, time: '12:00' };
+
+export const RAMADAN_PROGRAMMES: Programme[] = [
+  {
+    id: 'r-suhur', name: 'Suhur et Tarawih', forWho: 'Une séance après le suhur, une après les Tarawih',
+    sessions: [{ label: 'Après le suhur', size: 'half1', time: '04:45' }, { label: 'Après les Tarawih', size: 'half2', time: '22:15' }],
+  },
+  {
+    id: 'r-iftar', name: "Autour de l'iftar", forWho: "Après Fajr, avant l'iftar et après les Tarawih",
+    sessions: [{ label: 'Après Fajr', size: 1, time: '05:50' }, { label: "Avant l'iftar", size: 1, time: '18:00' }, { label: 'Après les Tarawih', size: 1, time: '22:15' }],
+  },
+  {
+    id: 'r-prieres', name: 'Après chaque prière', forWho: '5 petites séances, une après chaque prière',
+    sessions: ['Après Fajr', 'Après Dhuhr', 'Après Asr', 'Après Maghrib', 'Après Isha'].map((l) => ({ label: l, size: 1, time: moment(l).time })),
+  },
+];
+
+/** Rythme personnalisé du Ramadan : les moments choisis, rangés dans l'ordre de la journée, à parts égales. */
+export function ramadanCustom(moments: string[]): Programme {
+  const order = (l: string) => RAMADAN_MOMENTS.findIndex((m) => m.label === l);
+  const list = [...(moments.length ? moments : DEFAULT_RAMADAN_MOMENTS)].sort((a, b) => order(a) - order(b));
+  return { id: RAMADAN_CUSTOM_ID, name: 'Rythme personnalisé', forWho: 'Vos moments à vous, à parts égales', sessions: list.map((l) => ({ label: l, size: 1, time: moment(l).time })) };
+}
+
+export function ramadanProgramme(r: RamadanState): Programme {
+  if (r.programme === RAMADAN_CUSTOM_ID) return ramadanCustom(r.moments ?? DEFAULT_RAMADAN_MOMENTS);
+  return RAMADAN_PROGRAMMES.find((p) => p.id === r.programme) ?? RAMADAN_PROGRAMMES[0];
+}
+
+/** Le programme d'un suivi : rythme du Ramadan pour le khatam du Ramadan, programme habituel sinon. */
+export function programmeOf(s: State, id: TrackId): Programme {
+  return id === 'ramadan' && s.ramadan ? ramadanProgramme(s.ramadan) : programmeById(s.programmeId);
 }

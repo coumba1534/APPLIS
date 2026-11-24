@@ -45,6 +45,16 @@ export interface RamadanState {
   catchPlan: CatchPlan | null;
   /** Jour où on l'a rejoint. */
   joinedOn: string;
+  /** Le parcours d'accueil du Ramadan a été fait. */
+  welcomed?: boolean;
+  /** Rythme choisi pour le Ramadan (indépendant du programme habituel). */
+  programme?: string;
+  /** Rythme personnalisé : les moments choisis. */
+  moments?: string[];
+  /** Intention (facultative), rappelée chaque jour sur la carte du Ramadan. */
+  niyya?: string;
+  /** Rappels en plus : encouragement du soir, les 10 dernières nuits. */
+  extras?: { evening: boolean; last10: boolean };
 }
 
 /** Les deux suivis possibles : le khatam personnel et celui du Ramadan. */
@@ -489,6 +499,11 @@ function freezePause(s: State, to: string): Partial<State> {
   const end = earlier(p.to, to);
   if (end < p.from) return {};
   return { khatam: { ...s.khatam, pauses: [...(s.khatam.pauses ?? []), { ...p, to: end }] } };
+}
+
+/** Enregistre les choix du parcours d'accueil du Ramadan. */
+export function setRamadanSetup(p: Partial<Pick<RamadanState, 'welcomed' | 'programme' | 'moments' | 'niyya' | 'extras'>>) {
+  update((s) => (s.ramadan ? { ramadan: { ...s.ramadan, ...p } } : {}));
 }
 
 /** Quitte le khatam du Ramadan avant la fin : le khatam personnel reprend dès demain. */
