@@ -428,3 +428,12 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .rm-moon { width: 54px; height: 54px; flex: 0 0 54px; filter: drop-shadow(0 0 12px rgba(246, 221, 176, .35)) }
 .rm-niyya { font-size: 13px; color: #F6DDB0; font-style: italic; border-left: 2px solid #E9B45F; padding-left: 10px }
 @media (prefers-reduced-motion: reduce) { .rw *, .rf * { animation: none !important; transition: none !important } }
+
+/* Liste des jours à rattraper (plusieurs jours en retard) */
+.missed-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.missed-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; background: var(--surface); border-radius: 12px; padding: 8px 10px }
+.missed-list li b { color: var(--ink); display: block; font-size: 14px }
+.missed-list li small { color: var(--muted); font-size: 12px }
+.missed-list .ghost { padding: 6px 10px; font-size: 13px }
+.missed-list .ghost.ok { color: var(--teal); border-color: var(--teal) }
+.crow.crow-r { grid-template-columns: minmax(0, 1fr) auto 32px }

@@ -1,8 +1,9 @@
 import { useState } from 'preact/hooks';
-import { useStore, update, currentDay, endDate, formatDate, setKhatamStart, stopTrial, stopKhatam, resumeKhatam, resumeDay, deleteHistoryItem, hasProgress, isPaused, pauseEnd, leaveRamadan, addDays } from '../store';
+import { useStore, update, setRamadanSetup, currentDay, endDate, formatDate, setKhatamStart, stopTrial, stopKhatam, resumeKhatam, resumeDay, deleteHistoryItem, hasProgress, isPaused, pauseEnd, leaveRamadan, addDays } from '../store';
 import { ramadanEnd } from '../config';
 import { ramadanStart } from '../config';
-import { allProgrammes, sessionsFor, DEFAULT_CUSTOM, CUSTOM_ID, MAX_CUSTOM_SESSIONS, MOMENTS, customProgramme, sortByTime, CustomSession } from '../data/programmes';
+import { allProgrammes, sessionsFor, DEFAULT_CUSTOM, CUSTOM_ID, MAX_CUSTOM_SESSIONS, MOMENTS, customProgramme, sortByTime, CustomSession,
+  RAMADAN_PROGRAMMES, RAMADAN_MOMENTS, RAMADAN_CUSTOM_ID, DEFAULT_RAMADAN_MOMENTS, ramadanCustom } from '../data/programmes';
 import { portion, dayLabel, pagesLabel, portionPages, pageSpan, juzTitle } from '../data/khatam';
 import { toast } from '../ui';
 
@@ -24,6 +25,12 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
   const r = s.ramadan;
   const rDay = currentDay(s, 'ramadan');
   const paused = isPaused(s);
+  /** Khatam du Ramadan rejoint et pas encore terminé : l'onglet montre d'abord son rythme et son calendrier. */
+  const rOn = !!r && !r.khatam.finishedOn;
+  const rSample = portion(29, Math.min(Math.max(rDay, 1), 29));
+  const rMoments = r?.moments ?? DEFAULT_RAMADAN_MOMENTS;
+  const rProgs = [...RAMADAN_PROGRAMMES, ramadanCustom(rMoments)];
+  const rChosen = r?.programme ?? RAMADAN_PROGRAMMES[0].id;
 
   const chooseProgramme = (id: string) => {
     if (id === CUSTOM_ID && !s.customProgramme.length) update({ customProgramme: DEFAULT_CUSTOM.map((x) => ({ ...x })) });
@@ -43,14 +50,34 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
             {!r.khatam.finishedOn && !leaving && <button class="link stop-link" onClick={() => setLeaving(true)}>Quitter le khatam du Ramadan</button>}
             {leaving && (
               <div class="confirm">
-                <p>Quitter le khatam du Ramadan ?{s.khatam && !s.khatam.finishedOn ? ' Votre khatam personnel reprendra dès demain.' : ''}</p>
+                <p><b>Votre progression sera perdue.</b> {r.done.length > 0
+                  ? `Vous avez lu ${r.done.length} jour${r.done.length > 1 ? 's' : ''} sur 29, et un khatam du Ramadan ne peut pas être repris.`
+                  : 'Un khatam du Ramadan ne peut pas être repris.'}{s.khatam && !s.khatam.finishedOn ? ' Votre khatam personnel reprendra dès demain.' : ''}</p>
                 <div class="actions-row">
-                  <button class="btn danger-fill" onClick={() => { leaveRamadan(); setLeaving(false); toast('Khatam du Ramadan quitté'); }}>Quitter</button>
+                  <button class="btn danger-fill" onClick={() => { leaveRamadan(); setLeaving(false); toast('Khatam du Ramadan quitté'); }}>Quitter quand même</button>
                   <button class="ghost" onClick={() => setLeaving(false)}>Annuler</button>
                 </div>
               </div>
             )}
           </div>
+
+          {rOn && (<>
+            <h2>Mon rythme du Ramadan</h2>
+            <p class="note">La lecture du jour (environ 21 pages) est découpée en séances. Votre programme habituel reprendra après le Ramadan.</p>
+            <div class="progs">
+              {rProgs.map((p) => (
+                <button class="prog" aria-pressed={p.id === rChosen} onClick={() => { setRamadanSetup({ programme: p.id, ...(p.id === RAMADAN_CUSTOM_ID && !r!.moments ? { moments: DEFAULT_RAMADAN_MOMENTS } : {}) }); toast(`${p.name} choisi`); }}>
+                  <b>{p.name}</b><small>{p.forWho}</small>
+                  <div class="chips">{sessionsFor(p, rSample).map((x) => <span>{x.label} · {pagesLabel(x.pages)}</span>)}</div>
+                </button>
+              ))}
+            </div>
+            {rChosen === RAMADAN_CUSTOM_ID && <RamadanEditor moments={rMoments} />}
+            {rDay >= 1 && (<>
+              <h2>Calendrier du Ramadan · 29 jours</h2>
+              <Calendar N={29} done={r!.done} day={rDay} />
+            </>)}
+          </>)}
         </>
       )}
 
@@ -99,7 +126,8 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
         </div>
       )}
 
-      <h2>Mon programme de lecture</h2>
+      <h2>{rOn ? 'Mon programme habituel' : 'Mon programme de lecture'}</h2>
+      {rOn && <p class="note">Il s'appliquera à votre khatam personnel après le Ramadan.</p>}
       <p class="note">La portion du jour ({pagesLabel(portionPages(sample[0], sample[1]))}) est découpée en séances. Changez de programme quand vous voulez.</p>
       <div class="progs">
         {progs.map((p) => (
@@ -113,18 +141,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
 
       {k && (<>
       <h2>Calendrier · {N} jours</h2>
-      <div class="legend"><span style="--c:var(--teal)">Lu</span><span style="--c:var(--saffron)">Aujourd'hui</span><span style="--c:var(--late)">En retard</span><span style="--c:var(--line)">À venir</span></div>
-      <div class="gridN">
-        {Array.from({ length: N }, (_, i) => {
-          const d = i + 1, done = s.done.includes(d);
-          const cls = done ? 'done' : d === day ? 'now' : d < day ? 'late' : '';
-          const [a, b] = portion(N, d);
-          const [p1, p2] = pageSpan(a, b);
-          const label = done ? 'lu' : d === day ? 'auj.' : d < day ? 'retard' : `p. ${p1}`;
-          return <div class={`cell ${cls}`} title={`Jour ${d} · ${juzTitle(a, b) ?? ''} pages ${p1} à ${p2}`}><b>{d}</b><small>{label}</small></div>;
-        })}
-      </div>
-
+      <Calendar N={N} done={s.done} day={day} />
       </>)}
 
       {s.history.length > 0 && (
@@ -174,6 +191,46 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
         </>
       )}
     </>
+  );
+}
+
+/** Calendrier d'un khatam : lu, aujourd'hui, en retard, à venir. */
+function Calendar({ N, done: doneDays, day }: { N: number; done: number[]; day: number }) {
+  return (<>
+    <div class="legend"><span style="--c:var(--teal)">Lu</span><span style="--c:var(--saffron)">Aujourd'hui</span><span style="--c:var(--late)">En retard</span><span style="--c:var(--line)">À venir</span></div>
+    <div class="gridN">
+      {Array.from({ length: N }, (_, i) => {
+        const d = i + 1, done = doneDays.includes(d);
+        const cls = done ? 'done' : d === day ? 'now' : d < day ? 'late' : '';
+        const [a, b] = portion(N, d);
+        const [p1, p2] = pageSpan(a, b);
+        const label = done ? 'lu' : d === day ? 'auj.' : d < day ? 'retard' : `p. ${p1}`;
+        return <div class={`cell ${cls}`} title={`Jour ${d} · ${juzTitle(a, b) ?? ''} pages ${p1} à ${p2}`}><b>{d}</b><small>{label}</small></div>;
+      })}
+    </div>
+  </>);
+}
+
+/** Rythme personnalisé du Ramadan : les moments choisis, à parts égales. Les heures se règlent dans l'onglet Rappels. */
+function RamadanEditor({ moments }: { moments: string[] }) {
+  const set = (next: string[]) => setRamadanSetup({ moments: next });
+  return (
+    <div class="card">
+      <h3>Mes moments du Ramadan</h3>
+      <p class="note">La lecture du jour est partagée à parts égales entre vos moments, rangés dans l'ordre de la journée. Les heures des rappels se règlent dans l'onglet Rappels.</p>
+      {moments.map((m, i) => (
+        <div class="crow crow-r" key={i}>
+          <select class="cname" aria-label={`Moment ${i + 1}`} value={m} onChange={(e) => set(moments.map((x, j) => (j === i ? (e.target as HTMLSelectElement).value : x)))}>
+            {RAMADAN_MOMENTS.map((o) => <option value={o.label} disabled={o.label !== m && moments.includes(o.label)}>{o.label}</option>)}
+          </select>
+          <small class="cpages" style="grid-column:auto;margin-top:0">{pagesLabel(21 / moments.length)}</small>
+          <button class="rm-btn" aria-label={`Retirer le moment ${i + 1}`} disabled={moments.length <= 1} onClick={() => set(moments.filter((_, j) => j !== i))}>✕</button>
+        </div>
+      ))}
+      <div class="actions-row">
+        <button class="ghost" disabled={moments.length >= 6} onClick={() => { const o = RAMADAN_MOMENTS.find((x) => !moments.includes(x.label)); if (o) set([...moments, o.label]); }}>+ Ajouter un moment</button>
+      </div>
+    </div>
   );
 }
 

@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks';
 import { useStore, update, currentDay, toggleSession, setDayDone, readCatchUp, setCatchPlan, startTrial, todayISO, formatDate, endDate, getTrack, isPaused, pauseEnd, ramadanActive, activeTrackId, addDays, State, TrackId } from '../store';
 import { ramadanEnd, useConfig } from '../config';
 import { programmeOf, sessionsFor } from '../data/programmes';
@@ -89,6 +90,7 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
   const s = useStore();
   const t = getTrack(s, id);
   const k = t?.khatam ?? null;
+  const [showAllMissed, setShowAllMissed] = useState(false);
   const isRamadan = id === 'ramadan';
 
   // ---- Pas de khatam en cours ----
@@ -285,6 +287,37 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
             ))}
           </ul>
           <button class="link" onClick={() => openReader(missedLeft[0].a)}>Lire la suite du {dayName(N, missed[0])}</button>
+        </div>
+      ) : missed.length > 1 ? (
+        <div class="catchup">
+          <b>{missed.length} jours à rattraper</b>
+          <p>{isRamadan && s.ramadan && s.ramadan.joinedOn > k.start
+            ? `Vous avez rejoint le khatam en cours de route : lisez ces jours à votre rythme, jusqu'au ${formatDate(ramadanEnd())}.`
+            : 'Pas d\'inquiétude : lisez-les à votre rythme, en plus de la lecture du jour.'}</p>
+          <ul class="missed-list">
+            {(showAllMissed ? missed : missed.slice(0, 5)).map((d) => {
+              const [pa, pb] = portion(N, d);
+              return (
+                <li key={d}>
+                  <div><b>Jour {d}</b><small>{juzTitle(pa, pb) ? `${juzTitle(pa, pb)} · ` : ""}{pagesRange(pa, pb)}</small></div>
+                  <button class="ghost" onClick={() => openReader(pa)}>Lire</button>
+                  <button class="ghost ok" onClick={() => { setDayDone(d, true, id); toast(`Machallah ! ${cap(dayName(N, d))} rattrapé`); }}>Lu ✓</button>
+                </li>
+              );
+            })}
+          </ul>
+          {missed.length > 5 && <button class="link" onClick={() => setShowAllMissed(!showAllMissed)}>{showAllMissed ? 'Voir moins' : `Voir les ${missed.length} jours`}</button>}
+          <p class="note">Ou étalez le {dayName(N, missed[0])} sur plusieurs jours :</p>
+          <div class="opts">
+            {[2, 4].map((d) => {
+              const [pa, pb] = portion(N, missed[0]);
+              return (
+                <button key={d} onClick={() => { setCatchPlan({ day: missed[0], parts: d, partsDone: 0, lastDay: null }, id); toast(`Rattrapage ajouté à vos séances (${d} jours)`); }}>
+                  {d} jours · +{pn(portionPages(pa, pb) / d)} p./jour
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : missed.length > 0 && (
         <div class="catchup">
