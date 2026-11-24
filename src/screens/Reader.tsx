@@ -74,12 +74,25 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
   const shown: ReaderTarget = pageMode ? { mode: 'page', page } : target.mode === 'page' ? { mode: 'juz', juz: juzOf(pageFirstVerse(target.page)) } : target;
   const [a, b] = versesOf(shown);
 
+  // Défilement continu : on affiche une suite de juz [lo, hi], qui s'allonge quand on arrive en haut ou en bas.
+  const winKey = `${shown.mode}-${a}`;
+  const fresh = () => {
+    const ja = juzOf(a), jf = focus !== null ? juzOf(focus) : ja;
+    // Reprise de lecture loin du juz choisi : on part directement de là où on s'était arrêté.
+    // Le juz précédent est déjà là : on peut se placer précisément et remonter sans attendre.
+    if (Math.abs(jf - ja) > 1) return { key: winKey, lo: Math.max(1, jf - 1), hi: jf };
+    return { key: winKey, lo: Math.max(1, Math.min(ja, jf) - 1), hi: Math.max(ja, jf) };
+  };
+  const [winState, setWin] = useState(fresh);
+  const win = winState.key === winKey ? winState : fresh();
+  /** Hauteur et position avant d'ajouter un juz au-dessus, pour ne pas faire sauter la lecture. */
+  const prepend = useRef<{ h: number; y: number } | null>(null);
+
   useEffect(() => {
     if (shown.mode === 'page') {
       const first = posOf(a);
       onTitle([`Page ${shown.page} · ${SURAHS[first.s - 1][1]}`, `Juz ${juzOf(a)} · ${JUZ_NAMES[juzOf(a) - 1]}`]);
-    } else if (shown.mode === 'juz') onTitle([`Juz ${shown.juz} · ${JUZ_NAMES[shown.juz - 1]}`, `Pages ${pageOf(a)} à ${pageOf(b)}`]);
-    else onTitle([`${SURAHS[shown.sura - 1][1]} · ${SURAHS[shown.sura - 1][0]}`, `Sourate ${shown.sura} · ${SURAHS[shown.sura - 1][3]} versets`]);
+    }
   }, [shown.mode, a]);
 
   // Mode page : on masque le titre de l'écran pour laisser toute la place au mushaf.
@@ -96,19 +109,33 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
     if (focus !== null) {
       const { s: fs, n: fn } = posOf(focus);
       const el = document.getElementById(`v${fs}-${fn}`);
+      setFocus(null);
       if (el) {
         el.scrollIntoView({ block: 'start' });
         el.classList.add('flash');
         window.setTimeout(() => el.classList.remove('flash'), 1600);
-        setFocus(null);
         return;
       }
-      setFocus(null); // verset hors de la portion affichée : on va au marque-page
     }
-    if (!s.bookmark) return;
-    const el = document.getElementById(`v${s.bookmark.s}-${s.bookmark.n}`);
-    if (el) el.scrollIntoView({ block: 'center' }); else window.scrollTo(0, 0);
+    // Le marque-page s'il est dans le juz ou la sourate choisis, sinon leur début.
+    if (markAbs >= a && markAbs <= b) {
+      const el = document.getElementById(`v${s.bookmark!.s}-${s.bookmark!.n}`);
+      if (el) { el.scrollIntoView({ block: 'center' }); return; }
+    }
+    const { s: ss, n: sn } = posOf(a);
+    const head = a === juzVerses(juzOf(a))[0] ? document.getElementById(`j${juzOf(a)}`) : sn === 1 ? document.getElementById(`s${ss}`) : null;
+    const el = head ?? document.getElementById(`v${ss}-${sn}`);
+    if (!el || (juzOf(a) === 1 && a === 1)) { window.scrollTo(0, 0); return; }
+    el.scrollIntoView({ block: 'start' });
   }, [ar, a, pageMode, focus]);
+
+  // Après l'ajout d'un juz au-dessus : garder le même verset sous les yeux.
+  useLayoutEffect(() => {
+    const p = prepend.current;
+    if (!p) return;
+    prepend.current = null;
+    window.scrollTo(0, p.y + (document.documentElement.scrollHeight - p.h));
+  }, [win.lo]);
 
   // En défilement : retenir le verset en haut de l'écran (pour les menus et le changement de mode).
   const [here, setHere] = useState<number | null>(null);
@@ -123,6 +150,13 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
         queued = false;
         const v = topVisibleVerse();
         setHere(v);
+        // Ajouter le juz suivant (ou précédent) quand on approche du bas (ou du haut).
+        const doc = document.documentElement;
+        if (doc.scrollHeight - window.scrollY - window.innerHeight < 1500 && win.hi < 30) setWin({ ...win, hi: win.hi + 1 });
+        else if (window.scrollY < 600 && win.lo > 1 && !prepend.current && v !== null) {
+          prepend.current = { h: doc.scrollHeight, y: window.scrollY };
+          setWin({ ...win, lo: win.lo - 1 });
+        }
         // Retenir le verset lu, pour reprendre au même endroit à la réouverture.
         if (v !== null) { window.clearTimeout(saveTimer); saveTimer = window.setTimeout(() => update({ readerAbs: v }), 500); }
       });
@@ -130,13 +164,14 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
-  }, [pageMode, a, ar]);
+  }, [pageMode, a, ar, win.lo, win.hi, win.key]);
 
   /** Premier verset visible sous la barre d'outils, en mode défilement. */
   const topVisibleVerse = () => {
     const limit = (document.querySelector('.tools')?.getBoundingClientRect().bottom ?? 0) + 4;
     for (const el of document.querySelectorAll<HTMLElement>('.verse[id]')) {
-      if (el.getBoundingClientRect().bottom > limit) {
+      // Un verset dont il ne reste qu'un bout visible sous la barre ne compte pas.
+      if (el.getBoundingClientRect().bottom > limit + 40) {
         const [vs, vn] = el.id.slice(1).split('-').map(Number);
         return absOf(vs, vn);
       }
@@ -205,10 +240,6 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
 
   const go = (t: ReaderTarget) => { setTarget(t); window.scrollTo(0, 0); };
   const toPageOr = (t: ReaderTarget) => go(pageMode ? { mode: 'page', page: pageOf(versesOf(t)[0]) } : t);
-  const step = (d: number) => {
-    if (shown.mode === 'juz') go({ mode: 'juz', juz: shown.juz + d });
-    else if (shown.mode === 'sura') go({ mode: 'sura', sura: shown.sura + d });
-  };
   const setLayout = (l: 'scroll' | 'page') => {
     if (l === layout) return;
     // Rester au même endroit du Coran en changeant de mode.
@@ -228,13 +259,16 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
   const rows = [];
   if (!pageMode && ar && ar.kind === textKind) {
     let pg = 0, sura = 0;
-    for (let i = a; i <= b; i++) {
+    const from = juzVerses(win.lo)[0], to = juzVerses(win.hi)[1];
+    for (let i = from; i <= to; i++) {
       const { s: si, n } = posOf(i);
+      const j = juzOf(i);
+      if (i === juzVerses(j)[0]) rows.push(<div class="juzmark" id={`j${j}`} key={`j${j}`}><span>Juz {j} · {JUZ_NAMES[j - 1]}</span></div>);
       if (si !== sura) {
         sura = si;
         const m = SURAHS[si - 1];
         rows.push(n === 1
-          ? <div class="sura" key={`s${si}`}><div class="frame">سورة {m[0]}</div><small>Sourate {si} · {m[1]} · {m[2]} · {m[3]} versets</small></div>
+          ? <div class="sura" id={`s${si}`} key={`s${si}`}><div class="frame">سورة {m[0]}</div><small>Sourate {si} · {m[1]} · {m[2]} · {m[3]} versets</small></div>
           : <div class="sura" key={`s${si}`}><small>Sourate {si} · {m[1]} · suite, à partir du verset {n}</small></div>);
         if (n === 1 && si !== 1 && si !== 9) rows.push(<div class="bism" key={`b${si}`}><ColoredAyah text={BISMILLAH} s={1} n={1} /></div>);
       }
@@ -252,9 +286,14 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
   }
 
   // Les menus suivent le verset en cours de lecture.
-  const reading = !pageMode && here !== null && here >= a && here <= b ? here : a;
-  const curJuz = shown.mode === 'juz' ? shown.juz : juzOf(reading);
-  const curSura = shown.mode === 'sura' ? shown.sura : posOf(reading).s;
+  const reading = !pageMode && here !== null ? here : a;
+  const curJuz = pageMode ? juzOf(a) : juzOf(reading);
+  const curSura = pageMode ? posOf(a).s : posOf(reading).s;
+  useEffect(() => {
+    if (pageMode) return;
+    const j = juzOf(reading), { s: rs } = posOf(reading);
+    onTitle([`Juz ${j} · ${JUZ_NAMES[j - 1]}`, `${SURAHS[rs - 1][1]} · page ${pageOf(reading)}`]);
+  }, [pageMode, reading]);
 
   return (
     <>
@@ -361,10 +400,6 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
           <div class={`reader ${prefs.paper ? 'paper' : ''}`} style={style}>
             {error ? <p class="loading">Le texte n'a pas pu être chargé. Vérifiez la connexion puis rouvrez cet onglet.</p>
               : rows.length === 0 ? <p class="loading">Chargement du Coran…</p> : rows}
-          </div>
-          <div class="rnav">
-            <button class="ghost" disabled={shown.mode === 'juz' ? shown.juz === 1 : shown.mode === 'sura' && shown.sura === 1} onClick={() => step(-1)}>‹ Précédent</button>
-            <button class="ghost" disabled={shown.mode === 'juz' ? shown.juz === 30 : shown.mode === 'sura' && shown.sura === 114} onClick={() => step(1)}>Suivant ›</button>
           </div>
         </>
       )}

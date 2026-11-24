@@ -437,3 +437,10 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .missed-list .ghost { padding: 6px 10px; font-size: 13px }
 .missed-list .ghost.ok { color: var(--teal); border-color: var(--teal) }
 .crow.crow-r { grid-template-columns: minmax(0, 1fr) auto 32px }
+
+/* Défilement continu : passage d'un juz au suivant */
+.reader { overflow-anchor: none }
+.juzmark { display: flex; align-items: center; gap: 10px; padding: 18px 0 4px; color: var(--teal); font-weight: 700; font-size: 13px; letter-spacing: .02em; scroll-margin-top: calc(var(--top-h, 64px) + 104px) }
+.juzmark::before, .juzmark::after { content: ""; flex: 1; height: 1px; background: currentColor; opacity: .35 }
+.reader.paper .juzmark { color: var(--aya-paper) }
+.sura { scroll-margin-top: calc(var(--top-h, 64px) + 104px) }
