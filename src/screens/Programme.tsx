@@ -6,6 +6,7 @@ import { allProgrammes, sessionsFor, DEFAULT_CUSTOM, CUSTOM_ID, MAX_CUSTOM_SESSI
   RAMADAN_PROGRAMMES, RAMADAN_MOMENTS, RAMADAN_CUSTOM_ID, DEFAULT_RAMADAN_MOMENTS, ramadanCustom } from '../data/programmes';
 import { portion, dayLabel, pagesLabel, portionPages, pageSpan, juzTitle } from '../data/khatam';
 import { toast } from '../ui';
+import { RamadanBanner } from './RamadanBanner';
 
 export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
   const s = useStore();
@@ -66,8 +67,8 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
       {leaving && (
         <div class="confirm">
           <p><b>Votre progression sera perdue.</b> {r!.done.length > 0
-            ? `Vous avez lu ${r!.done.length} jour${r!.done.length > 1 ? 's' : ''} sur 29, et un khatam du Ramadan ne peut pas être repris.`
-            : 'Un khatam du Ramadan ne peut pas être repris.'}{s.khatam && !s.khatam.finishedOn ? ' Votre khatam personnel reprendra dès demain.' : ''}</p>
+            ? `Vous avez lu ${r!.done.length} jour${r!.done.length > 1 ? 's' : ''} sur 29, et ce khatam ne pourra pas être repris là où vous en êtes : seulement recommencé depuis le début.`
+            : 'Il ne pourra pas être repris là où vous en êtes.'}{s.khatam && !s.khatam.finishedOn ? ' Votre khatam personnel reprendra dès demain.' : ''}</p>
           <div class="actions-row">
             <button class="btn danger-fill" onClick={() => { leaveRamadan(); setLeaving(false); toast('Khatam du Ramadan quitté'); }}>Quitter quand même</button>
             <button class="ghost" onClick={() => setLeaving(false)}>Annuler</button>
@@ -82,6 +83,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
 
   return (
     <>
+      {!r && <RamadanBanner always />}
       {ramadanMode ? (<>
         <h2>Khatam du Ramadan</h2>
         {ramadanSummary}

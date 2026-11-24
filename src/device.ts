@@ -1,6 +1,6 @@
 // Installation sur l'écran d'accueil et notifications.
-import { getState, todayISO, update, currentDay, getTrack, activeTrackId, closeRamadanIfOver, currentRamadanId, formatDate } from './store';
-import { ramadanVisible, ramadanName, ramadanStart } from './config';
+import { getState, todayISO, update, currentDay, getTrack, activeTrackId, closeRamadanIfOver, currentRamadanId, formatDate, canJoinRamadan } from './store';
+import { ramadanVisible, ramadanName, ramadanStart, daysToRamadan } from './config';
 import { programmeOf, sessionsFor } from './data/programmes';
 import { portion, juzTitle, pagesLabel } from './data/khatam';
 
@@ -49,7 +49,11 @@ const minutes = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); 
 export const ramadanNotifications = {
   available: () => ({
     title: 'Votre khatam du Ramadan est disponible 🌙',
-    body: `${ramadanName()} commence le ${formatDate(ramadanStart())}. Rejoignez le khatam : le Coran en entier en 29 jours.`,
+    body: `${ramadanName()} commence le ${formatDate(ramadanStart())}. Le khatam du Ramadan s'ouvrira le 1er jour : le Coran en entier en 29 jours.`,
+  }),
+  open: () => ({
+    title: 'Le khatam du Ramadan est ouvert 🌙',
+    body: 'Rejoignez-le dans l\'appli : le Coran en entier en 29 jours, comme dans les mosquées.',
   }),
   firstDay: () => ({
     title: 'Ramadan Moubarak 🌙',
@@ -77,7 +81,8 @@ export function startReminders() {
       notify(n.title, n.body, key);
     };
     const doneThisYear = s.history.some((h) => h.id === rid);
-    if (ramadanVisible() && !s.ramadan && !doneThisYear) once(`annonce:${rid}`, ramadanNotifications.available());
+    if (ramadanVisible() && !s.ramadan && !doneThisYear && daysToRamadan() > 0) once(`annonce:${rid}`, ramadanNotifications.available());
+    if (canJoinRamadan(s) && !doneThisYear) once(`ouvert:${rid}`, ramadanNotifications.open());
     if (s.ramadan && s.ramadan.khatam.start === date) once(`debut:${s.ramadan.khatam.id}`, ramadanNotifications.firstDay());
     // Veille des 10 dernières nuits (jour 20), en fin de journée.
     if (s.ramadan && s.ramadan.extras?.last10 !== false && currentDay(s, 'ramadan') === 20 && new Date().getHours() >= 17)

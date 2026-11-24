@@ -5,7 +5,7 @@ import type { ReaderTarget } from './screens/Reader';
 import { clampDays, portion, portionPages } from './data/khatam';
 import type { CustomSession } from './data/programmes';
 import { addDays, daysBetween, todayISO } from './dates';
-import { ramadanStart, ramadanName, ramadanEnd, ramadanTest, setRamadanTest, RAMADAN_KHATAM_DAYS } from './config';
+import { ramadanStart, ramadanName, ramadanEnd, ramadanTest, setRamadanTest, daysToRamadan, RAMADAN_KHATAM_DAYS } from './config';
 
 /**
  * Rattrapage d'un jour manqué : la portion de ce jour est lue en `parts` morceaux égaux,
@@ -479,11 +479,25 @@ export function activeTrackId(s: State = state): TrackId | null {
 }
 
 /** Rejoint le khatam du Ramadan : 29 jours. Le khatam personnel sera en pause pendant le mois. */
+/** Khatam du Ramadan de cette année déjà terminé (on ne le propose plus). */
+export const ramadanDoneThisYear = (s: State = state) => s.history.some((h) => h.id === currentRamadanId() && h.status === 'done');
+
+/** On peut rejoindre le khatam du Ramadan seulement une fois le mois commencé, et jusqu'à son dernier jour. */
+export const canJoinRamadan = (s: State = state) =>
+  !s.ramadan && !ramadanDoneThisYear(s) && daysToRamadan() <= 0 && todayISO() <= ramadanEnd();
+
+/** Rejoint (ou recommence à zéro) le khatam du Ramadan : les jours déjà passés sont à rattraper. */
 export function joinRamadan() {
   update((s) => {
-    if (s.ramadan) return {};
+    if (!canJoinRamadan(s)) return {};
     const start = ramadanStart();
     return {
+      // Recommencer après avoir quitté : l'ancien essai interrompu laisse la place au nouveau.
+      history: s.history.filter((h) => h.id !== currentRamadanId()),
+      // La pause figée en quittant ne doit pas compter deux fois les jours de la nouvelle pause.
+      ...(s.khatam?.pauses?.length ? { khatam: { ...s.khatam, pauses: s.khatam.pauses
+        .map((p) => (p.to >= todayISO() ? { ...p, to: addDays(todayISO(), -1) } : p))
+        .filter((p) => p.from <= p.to) } } : {}),
       ramadan: {
         khatam: { id: currentRamadanId(), kind: 'ramadan', name: ramadanName(), start, days: RAMADAN_KHATAM_DAYS, followsConfig: true },
         done: [], sessions: {}, catchPlan: null, joinedOn: todayISO(),
