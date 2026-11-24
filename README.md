@@ -9,7 +9,7 @@ Application web installable (PWA) pour faire un **khatam du Coran pendant le Ram
 - **Programmes** : 4 programmes prédéfinis (Matin et soir, Surtout le matin, Réparti sur la journée, Après chaque prière) qui s'adaptent à la portion du jour, et un **programme personnalisé** (le moment et l'heure de chaque séance ; les parts sont calculées automatiquement).
 - **Lire** : le Coran complet, par juz, par sourate ou par page.
   - **Mode Page** : les 604 pages du mushaf de Médine, 15 lignes par page comme le mushaf imprimé, dans l'écriture officielle du Complexe du Roi Fahd ; on tourne les pages en glissant.
-  - **Mode Défilement** : verset par verset, avec la traduction française et 5 écritures au choix (Mushaf de Médine, Classique, Moderne posée, Ouest-africaine, Fine et aérée).
+  - **Mode Défilement** : verset par verset, avec la traduction française et 3 écritures au choix (Mushaf de Médine, Classique, Moderne posée).
   - Un marque-page, dans les deux modes.
   - **Les noms d'Allah et de Rabb en rouge**, comme dans certains mushafs (`src/data/divine.ts`). Rabb n'est pas coloré là où il désigne un être humain ou un astre : 6:76, 6:77 (1re occurrence), 6:78, 12:23, 12:41, 12:42 (les deux), 12:50 (1re occurrence), 79:24.
 - **Programme** : le khatam en cours, le choix du programme, le calendrier des jours et l'historique ; mode essai pour commencer avant la date prévue.

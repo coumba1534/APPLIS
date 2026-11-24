@@ -13,8 +13,6 @@ export const SCRIPTS = [
   { id: 'medine', font: '"KFGQPC Hafs"', name: 'Mushaf de Médine', desc: 'Écriture officielle du Complexe Roi Fahd', text: 'ar-hafs' as const, size: 2 },
   { id: 'classique', font: '"Scheherazade New"', name: 'Classique', desc: 'Proche du mushaf de Médine' },
   { id: 'moderne', font: '"Noto Naskh Arabic"', name: 'Moderne posée', desc: 'Lettres nettes, très lisible', spacing: 2.4, size: -2 },
-  { id: 'ouest', font: 'Harmattan', name: 'Ouest-africaine', desc: 'Style des mushaf du Sénégal' },
-  { id: 'fine', font: 'Lateef', name: 'Fine et aérée', desc: 'Légère, à lire en grand', size: 4 },
 ];
 
 /** Tailles du texte proposées en mode défilement (en pixels). */
