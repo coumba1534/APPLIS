@@ -38,6 +38,8 @@ function dayName(N: number, d: number) {
 /** « juz 5 → 6 » ou « juz 5 » pour une portion. */
 const juzSpan = (a: number, b: number) => { const x = juzOf(a), y = juzOf(b); return x === y ? `juz ${x}` : `juz ${x} → ${y}`; };
 
+const cap = (t: string) => t[0].toUpperCase() + t.slice(1);
+
 const pagesRange = (a: number, b: number) => { const [x, y] = pageSpan(a, b); return x === y ? `p. ${x}` : `p. ${x}–${y}`; };
 
 type Props = { openReader: (abs?: number) => void; onNewKhatam: () => void };
@@ -156,6 +158,11 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
   const readToday = done ? total : sessions.filter((x) => checked.has(x.index)).reduce((t, x) => t + x.pages, 0);
   const missed = Array.from({ length: Math.min(day - 1, N) }, (_, i) => i + 1).filter((d) => !tDone.includes(d));
   const plan = t!.catchPlan;
+  // Jour manqué déjà commencé : on propose de cocher les séances qui restent.
+  const missedSessions = missed.length ? sessionsFor(prog, portion(N, missed[0])) : [];
+  const missedChecked = new Set(missed.length ? tSessions[missed[0]] ?? [] : []);
+  const missedLeft = missedSessions.filter((x) => !missedChecked.has(x.index));
+  const missedPartial = missedChecked.size > 0 && missedLeft.length > 0;
   const catchDoneToday = plan?.lastDay === todayISO();
   const whole = wholeJuz(a, b);
   const showRange = !whole;
@@ -252,9 +259,29 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
           <div class="bar"><i style={{ width: `${(plan.partsDone / plan.parts) * 100}%` }} /></div>
           <div class="opts"><button onClick={() => { setCatchPlan(null, id); toast('Rattrapage arrêté'); }}>Arrêter le rattrapage</button></div>
         </div>
+      ) : missedPartial ? (
+        <div class="catchup on">
+          <b>{cap(dayName(N, missed[0]))} : il reste {missedLeft.length === 1 ? 'une séance' : `${missedLeft.length} séances`}</b>
+          <p>Vous l'avez commencé. Cochez ce qu'il reste dès que c'est lu.</p>
+          <ul class="sessions plain">
+            {missedLeft.map((x) => (
+              <li key={x.index}>
+                <label class="sess">
+                  <input type="checkbox" checked={false} onChange={() => {
+                    const last = missedLeft.length === 1;
+                    toggleSession(missed[0], x.index, missedSessions.length, id);
+                    toast(last ? `Machallah ! ${cap(dayName(N, missed[0]))} terminé` : 'Séance validée, machallah !');
+                  }} />
+                  <div><b>{x.label}</b><small>{pagesLabel(x.pages)} · {pagesRange(x.a, x.b)}</small></div>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <button class="link" onClick={() => openReader(missedLeft[0].a)}>Lire la suite du {dayName(N, missed[0])}</button>
+        </div>
       ) : missed.length > 0 && (
         <div class="catchup">
-          <b>{dayName(N, missed[0])[0].toUpperCase() + dayName(N, missed[0]).slice(1)} pas encore lu</b>
+          <b>{cap(dayName(N, missed[0]))} pas encore lu</b>
           <p>Pas d'inquiétude : rattrapez-le en ajoutant un morceau à vos journées. Sur combien de jours ?</p>
           <div class="opts">
             {[1, 2, 4].map((d) => {
@@ -266,6 +293,7 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
               );
             })}
           </div>
+          <button class="link" onClick={() => { setDayDone(missed[0], true, id); toast(`${cap(dayName(N, missed[0]))} marqué comme lu`); }}>Je l'ai déjà lu</button>
         </div>
       )}
 

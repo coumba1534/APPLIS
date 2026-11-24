@@ -292,7 +292,10 @@ function commitDone(s: State, id: TrackId, doneSet: Set<number>, extra: TrackPat
     khatam = rest;
     history = history.filter((h) => h.id !== k.id);
   }
-  return { ...patchTrack(s, id, { done, khatam, ...extra }), history };
+  // Un jour terminé autrement (séances cochées, « Je l'ai déjà lu ») n'a plus besoin de son rattrapage.
+  const plan = 'catchPlan' in extra ? extra.catchPlan : t.catchPlan;
+  const catchPlan = plan && doneSet.has(plan.day) ? null : plan;
+  return { ...patchTrack(s, id, { done, khatam, ...extra, catchPlan }), history };
 }
 
 export function toggleSession(day: number, index: number, total: number, id: TrackId = 'personal') {

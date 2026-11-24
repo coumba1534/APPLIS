@@ -20,6 +20,10 @@ PWA (Vite + Preact + TypeScript), hors connexion grâce au service worker (`publ
 - **Khatam du Ramadan** : 29 jours (comme les mosquées), 240 quarts répartis régulièrement. Annoncé 10 jours avant la date **estimée** (`public/config.json`), bandeau + notification, « Rejoindre ». Le khatam personnel est **en pause** pendant le Ramadan (et le khatam de groupe aussi, quand il existera). Rattrapage jusqu'au dernier jour du Ramadan ; à l'Aïd, les jours non lus disparaissent avec un message bienveillant, historique, reprise du personnel. Pas de reprise possible d'un khatam du Ramadan.
 - **Réglages à distance** (`public/config.json`, `src/config.ts`) : date du Ramadan, durée du mois (29/30), nom, délai d'annonce, `enabled`, `testMode` (outils de test dans l'onglet Rappels). **Remettre `testMode` à `false` avant l'ouverture au public.**
 
+## Parcours d'accueil du Ramadan (validé, à intégrer)
+
+Maquette validée : https://claude.ai/artifact/N2red9a8keoGj6YJorP27n. Après « Rejoindre » : accueil festif (ciel étoilé, lanternes, croissant, « Ramadan Moubarak, prénom »), le défi (29 nuits, 30 juz, 604 pages, 29 lunes), le rythme du Ramadan (Suhur et Tarawih, Autour de l'iftar, Après chaque prière, **Rythme personnalisé**), les rappels (encouragement du soir, 10 dernières nuits), l'intention (facultative, **affichée chaque jour** sur la carte), « Bismillah, je commence » avec pluie d'étoiles. **Une lune qui grandit** avec la lecture sur la carte du Ramadan. Couleurs « nuit et or » **seulement sur la carte du Ramadan**. **Carte de fin à partager à l'Aïd** : idée validée.
+
 ## Décisions pour les groupes (étape Firebase, pas encore faite)
 
 - **Un seul groupe à la fois.** Une fois dans un groupe, rien à l'écran ne permet d'en rejoindre un autre, jusqu'à la fin du khatam du groupe. On peut **quitter** un groupe (bouton discret, confirmation).
