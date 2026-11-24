@@ -104,4 +104,4 @@ Le dossier `dist/` contient alors le site complet, à héberger tel quel (par ex
 - **Traduction française** : Muhammad Hamidullah, via [tanzil.net](https://tanzil.net/trans/fr.hamidullah).
 - **Hizb** (découpage du programme 1) : paquet [quran-meta](https://www.npmjs.com/package/quran-meta) (MIT).
 
-Les textes sont repris sans modification. Merci de garder ces mentions si vous réutilisez le projet.
+Les textes sont repris sans modification, à une exception : dans le texte des écritures Classique et Moderne posée (`ar.json`), la séparation des mots de 5 versets (2:72, 27:20, 36:22, 37:164, 41:47) a été alignée sur le texte officiel du Complexe du Roi Fahd ; aucune lettre n'a changé. Merci de garder ces mentions si vous réutilisez le projet.
