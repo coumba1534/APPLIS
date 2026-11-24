@@ -70,6 +70,8 @@ function lastIndexAtOrBefore(list: number[], abs: number): number {
 
 export const pageOf = (abs: number) => lastIndexAtOrBefore(PAGE_START, abs) + 1;
 export const juzOf = (abs: number) => lastIndexAtOrBefore(JUZ_START, abs) + 1;
+/** Numéro du hizb (1 à 60) : deux hizb par juz, quatre quarts par hizb. */
+export const hizbOf = (abs: number) => Math.floor(lastIndexAtOrBefore(QUARTERS, abs) / 4) + 1;
 
 /** Versets (numéros absolus) d'un juz, bornes incluses. */
 export const juzVerses = (j: number): [number, number] => [JUZ_START[j - 1], JUZ_START[j] - 1];

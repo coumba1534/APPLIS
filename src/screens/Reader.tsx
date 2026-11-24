@@ -1,13 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { useStore, update } from '../store';
 import {
-  SURAHS, JUZ_NAMES, BISMILLAH, TOTAL_PAGES, juzVerses, surahVerses, posOf, pageOf, juzOf, absOf, pageFirstVerse,
+  SURAHS, JUZ_NAMES, BISMILLAH, TOTAL_PAGES, juzVerses, surahVerses, posOf, pageOf, juzOf, absOf, pageFirstVerse, hizbOf,
   loadArabic, loadFrench, toArabicDigits,
 } from '../data/quran';
 import { toast } from '../ui';
 import { PageView } from './PageView';
 import { ColoredAyah } from './QuranText';
 import { setTheme } from '../theme';
+import { Unwan } from './Unwan';
 
 export const SCRIPTS = [
   { id: 'medine', font: '"KFGQPC Hafs"', name: 'Mushaf de Médine', desc: 'Écriture officielle du Complexe Roi Fahd', text: 'ar-hafs' as const, size: 2 },
@@ -46,6 +47,9 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
   const [focusMode, setFocusMode] = useState(false);
   /** Verset à afficher en haut de l'écran après un changement de mode (numéro absolu). */
   const [focus, setFocus] = useState<number | null>(() => (start === 'resume' ? s.readerAbs : null));
+  const focusDone = useRef(false);
+  /** Choix fait dans « Aller à » : on va au début de la sourate ou du juz, pas au marque-page. */
+  const fromGoto = useRef(false);
   const markAbs = s.bookmark ? absOf(s.bookmark.s, s.bookmark.n) : -1;
 
   useEffect(() => {
@@ -93,38 +97,64 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
     }
   }, [shown.mode, a]);
 
-  // Mode page : on masque le titre de l'écran pour laisser toute la place au mushaf.
+  // Dans Lire, la barre tout-en-un remplace le titre de l'écran : toute la place va au texte.
   useEffect(() => {
-    document.body.classList.toggle('immersive', pageMode);
-    if (!pageMode) setFocusMode(false);
+    document.body.classList.add('immersive');
     return () => document.body.classList.remove('immersive');
+  }, []);
+  useEffect(() => { if (!pageMode) setFocusMode(false); }, [pageMode]);
+  /** Fenêtre « Aller à » ouverte, et menu ⋯ d'un verset (numéro absolu). */
+  const [goto, setGoto] = useState(false);
+  const [verseMenu, setVerseMenu] = useState<number | null>(null);
+  /** Barre flottante du bas : masquée quand on descend dans la lecture, visible quand on remonte. */
+  const [floatHidden, setFloatHidden] = useState(false);
+  // Mode page : la barre flottante s'efface aussi quand on descend (pour dégager « Suivante / Précédente »).
+  useEffect(() => {
+    if (!pageMode) return;
+    let lastY = window.scrollY;
+    const onScroll = () => { const y = window.scrollY; if (Math.abs(y - lastY) > 8) { setFloatHidden(y > lastY); lastY = y; } };
+    setFloatHidden(false);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, [pageMode]);
 
   // Défilement : en venant du mode page, se placer sur le même verset ;
   // sinon aller au marque-page quand il est dans la portion affichée.
   useLayoutEffect(() => {
     if (pageMode || !ar || ar.kind !== textKind) return;
+    // Le verset demandé vient d'être affiché : ne pas repartir ailleurs quand `focus` se remet à zéro.
+    if (focusDone.current && focus === null) { focusDone.current = false; return; }
+    // Se placer sur un élément, puis recommencer une fois la police du mushaf chargée (les hauteurs changent).
+    const place = (el: Element, block: ScrollLogicalPosition) => {
+      el.scrollIntoView({ block });
+      const y = window.scrollY;
+      document.fonts?.ready.then(() => { if (Math.abs(window.scrollY - y) < 2) el.scrollIntoView({ block }); });
+    };
     if (focus !== null) {
       const { s: fs, n: fn } = posOf(focus);
       const el = document.getElementById(`v${fs}-${fn}`);
-      setFocus(null);
       if (el) {
-        el.scrollIntoView({ block: 'start' });
+        focusDone.current = true;
+        setFocus(null);
+        place(el, 'start');
         el.classList.add('flash');
         window.setTimeout(() => el.classList.remove('flash'), 1600);
         return;
       }
+      setFocus(null);
     }
-    // Le marque-page s'il est dans le juz ou la sourate choisis, sinon leur début.
-    if (markAbs >= a && markAbs <= b) {
+    // Le marque-page s'il est dans le juz ou la sourate ouverts (hors « Aller à »), sinon leur début.
+    const explicit = fromGoto.current;
+    fromGoto.current = false;
+    if (!explicit && markAbs >= a && markAbs <= b) {
       const el = document.getElementById(`v${s.bookmark!.s}-${s.bookmark!.n}`);
-      if (el) { el.scrollIntoView({ block: 'center' }); return; }
+      if (el) { place(el, 'center'); return; }
     }
     const { s: ss, n: sn } = posOf(a);
     const head = a === juzVerses(juzOf(a))[0] ? document.getElementById(`j${juzOf(a)}`) : sn === 1 ? document.getElementById(`s${ss}`) : null;
     const el = head ?? document.getElementById(`v${ss}-${sn}`);
     if (!el || (juzOf(a) === 1 && a === 1)) { window.scrollTo(0, 0); return; }
-    el.scrollIntoView({ block: 'start' });
+    place(el, 'start');
   }, [ar, a, pageMode, focus]);
 
   // Après l'ajout d'un juz au-dessus : garder le même verset sous les yeux.
@@ -141,11 +171,14 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
     if (pageMode) return;
     let queued = false;
     let saveTimer: number | undefined;
+    let lastY = window.scrollY;
     const onScroll = () => {
       if (queued) return;
       queued = true;
       requestAnimationFrame(() => {
         queued = false;
+        const y = window.scrollY;
+        if (Math.abs(y - lastY) > 12) { setFloatHidden(y > lastY && y > 200); lastY = y; }
         const v = topVisibleVerse();
         setHere(v);
         // Ajouter le juz suivant (ou précédent) quand on approche du bas (ou du haut).
@@ -254,6 +287,15 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
     setPrefs({ layout: l });
   };
 
+  /** Aller au marque-page, dans le mode de lecture en cours. */
+  const goBookmark = () => {
+    if (!s.bookmark) { toast(pageMode ? 'Pas encore de marque-page : appui long sur un verset pour en poser un' : 'Pas encore de marque-page : touchez un verset pour en poser un'); return; }
+    const v = absOf(s.bookmark.s, s.bookmark.n);
+    if (pageMode) { go({ mode: 'page', page: pageOf(v) }); return; }
+    setFocus(v);
+    setTarget({ mode: 'juz', juz: juzOf(v) });
+  };
+
   const rows = [];
   if (!pageMode && ar && ar.kind === textKind) {
     let pg = 0, sura = 0;
@@ -266,19 +308,25 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
         sura = si;
         const m = SURAHS[si - 1];
         rows.push(n === 1
-          ? <div class="sura" id={`s${si}`} key={`s${si}`}><div class="frame">سورة {m[0]}</div><small>Sourate {si} · {m[1]} · {m[2]} · {m[3]} versets</small></div>
+          ? <div class="sura" id={`s${si}`} key={`s${si}`}><Unwan s={si} /><small>Sourate {si} · {m[1]} · {m[2]} · {m[3]} versets</small></div>
           : <div class="sura" key={`s${si}`}><small>Sourate {si} · {m[1]} · suite, à partir du verset {n}</small></div>);
         if (n === 1 && si !== 1 && si !== 9) rows.push(<div class="bism" key={`b${si}`}><ColoredAyah text={BISMILLAH} s={1} n={1} /></div>);
       }
       const p = pageOf(i);
       if (p !== pg) { pg = p; rows.push(<div class="pagemark" key={`p${p}`}>Page {p}</div>); }
       rows.push(
-        <button key={i} id={`v${si}-${n}`} class={`verse ${i === markAbs ? 'marked' : ''}`} aria-label={`Sourate ${si}, verset ${n}`} onClick={() => mark(i)}>
+        <div key={i} id={`v${si}-${n}`} class={`verse ${i === markAbs ? 'marked' : ''}`} role="button" tabIndex={0} aria-label={`Sourate ${si}, verset ${n}`}
+          onClick={() => mark(i)} onKeyDown={(e) => { if (e.key === 'Enter') mark(i); }}>
+          <span class="vh">
+            <span class="ref">{si}:{n}</span>
+            {i === markAbs && <span class="vmark">Marque-page</span>}
+            <button class="vmore" aria-label={`Options du verset ${si}:${n}`} onClick={(e) => { e.stopPropagation(); setVerseMenu(i); }}>⋯</button>
+          </span>
           <span class="ar"><ColoredAyah text={ar.data[si - 1][n - 1]} s={si} n={n} />{' '}
             {script.id === 'medine' ? <span class="num hafs">{'۝' + toArabicDigits(n)}</span> : <span class="num">﴿{toArabicDigits(n)}﴾</span>}
           </span>
-          {prefs.french && fr && <span class="fr"><b>{n}</b>{fr[si - 1][n - 1]}</span>}
-        </button>,
+          {prefs.french && fr && <span class="fr">{fr[si - 1][n - 1]}</span>}
+        </div>,
       );
     }
   }
@@ -287,6 +335,8 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
   const reading = !pageMode && here !== null ? here : a;
   const curJuz = pageMode ? juzOf(a) : juzOf(reading);
   const curSura = pageMode ? posOf(a).s : posOf(reading).s;
+  const curPage = pageMode ? page : pageOf(reading);
+  const curHizb = hizbOf(pageMode ? a : reading);
   useEffect(() => {
     if (pageMode) return;
     const j = juzOf(reading), { s: rs } = posOf(reading);
@@ -295,41 +345,62 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
 
   return (
     <>
-      <div class="tools">
-        <div class="line">
-          <select aria-label="Choisir un juz" value={curJuz} onChange={(e) => toPageOr({ mode: 'juz', juz: +(e.target as HTMLSelectElement).value })}>
-            {JUZ_NAMES.map((n, i) => <option value={i + 1}>Juz {i + 1} · {n}</option>)}
-          </select>
-          <select aria-label="Choisir une sourate" value={curSura} onChange={(e) => toPageOr({ mode: 'sura', sura: +(e.target as HTMLSelectElement).value })}>
-            {SURAHS.map((x, i) => <option value={i + 1}>{i + 1}. {x[1]} · {x[0]}</option>)}
-          </select>
-          {pageMode && (
-            <select aria-label="Choisir une page" class="page-sel" value={page} onChange={(e) => go({ mode: 'page', page: +(e.target as HTMLSelectElement).value })}>
-              {Array.from({ length: TOTAL_PAGES }, (_, i) => <option value={i + 1}>p. {i + 1}</option>)}
-            </select>
-          )}
-        </div>
-        <div class="line">
-          <div class="seg" role="group" aria-label="Mode de lecture">
-            <button aria-pressed={!pageMode} onClick={() => setLayout('scroll')}>Défilement</button>
-            <button aria-pressed={pageMode} onClick={() => setLayout('page')}>Page</button>
-          </div>
-          {!pageMode && (
-            <div class="seg" role="group" aria-label="Traduction">
-              <button aria-pressed={prefs.french} onClick={() => setPrefs({ french: !prefs.french })}>+ Français</button>
-            </div>
-          )}
-          {pageMode && <button class="ghost" aria-label="Réglages de lecture" onClick={() => setPanel(true)}>Aa</button>}
-          {s.bookmark && (
-            <span class="mark-info">
-              Marque-page : {SURAHS[s.bookmark.s - 1][1]} {s.bookmark.n}
-              <button class="mark-x" aria-label="Retirer le marque-page" onClick={removeBookmark}>✕</button>
-            </span>
-          )}
-        </div>
+      <div class="tools rbar">
+        <button class="where" aria-label="Aller à une sourate, un juz ou une page" onClick={() => setGoto(true)}>
+          <span class="medal">{curSura}</span>
+          <span class="wtxt">
+            <b>{SURAHS[curSura - 1][1]}<span class="war">{SURAHS[curSura - 1][0]}</span></b>
+            <small>Page {curPage} · Juz {curJuz} · Hizb {curHizb}</small>
+          </span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <button class={`ibtn ${s.bookmark ? 'on' : ''}`} aria-label={s.bookmark ? 'Aller au marque-page' : 'Marque-page'} onClick={goBookmark}>
+          <svg viewBox="0 0 24 24" fill={s.bookmark ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z" /></svg>
+        </button>
+        <button class="ibtn aa" aria-label="Réglages de lecture" aria-expanded={panel} onClick={() => setPanel(true)}>Aa</button>
       </div>
 
-      {!pageMode && <button class="fab" aria-label="Réglages de lecture" aria-expanded={panel} onClick={() => setPanel(true)}>Aa</button>}
+      <div class={`rfloat ${floatHidden ? 'hide' : ''}`} role="group" aria-label="Affichage">
+        <button aria-pressed={!pageMode} onClick={() => setLayout('scroll')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 6h14M5 12h14M5 18h14" /></svg>Défilement
+        </button>
+        <button aria-pressed={pageMode} onClick={() => setLayout('page')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="2" /></svg>Page
+        </button>
+        {!pageMode && <button aria-pressed={prefs.french} aria-label="Traduction française" onClick={() => setPrefs({ french: !prefs.french })}>FR</button>}
+      </div>
+
+      {goto && <GoTo cur={{ sura: curSura, juz: curJuz, page: curPage }} bookmark={s.bookmark}
+        onClose={() => setGoto(false)}
+        onBookmark={() => { setGoto(false); goBookmark(); }}
+        onGo={(t) => {
+          setGoto(false);
+          fromGoto.current = true;
+          // Une page en mode défilement : se placer sur son premier verset.
+          if (t.mode === 'page' && !pageMode) { const v = pageFirstVerse(t.page); setFocus(v); setTarget({ mode: 'juz', juz: juzOf(v) }); return; }
+          toPageOr(t);
+        }} />}
+
+      {verseMenu !== null && (() => {
+        const v = verseMenu, { s: vs, n: vn } = posOf(v);
+        const text = () => `${ar?.data[vs - 1][vn - 1] ?? ''}${fr ? `\n\n${fr[vs - 1][vn - 1]}` : ''}\n\nSourate ${SURAHS[vs - 1][1]} (${vs}), verset ${vn}`;
+        const close = () => setVerseMenu(null);
+        return (
+          <div class="sheet-backdrop" onClick={close}>
+            <div class="sheet vmenu" role="dialog" aria-label={`Verset ${vs}:${vn}`} onClick={(e) => e.stopPropagation()}>
+              <div class="sheet-head"><b>{SURAHS[vs - 1][1]} · verset {vn}</b><button class="close" aria-label="Fermer" onClick={close}>✕</button></div>
+              <button class="vact" onClick={() => { mark(v); close(); }}>{v === markAbs ? 'Retirer le marque-page' : 'Poser le marque-page ici'}</button>
+              <button class="vact" onClick={async () => {
+                try { await navigator.clipboard.writeText(text()); toast('Verset copié'); } catch { toast("La copie n'a pas pu se faire"); }
+                close();
+              }}>Copier le verset{prefs.french ? ' (arabe et français)' : ''}</button>
+              {typeof navigator.share === 'function' && (
+                <button class="vact" onClick={async () => { try { await navigator.share({ text: text() }); } catch { /* partage annulé */ } close(); }}>Partager</button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {panel && (
         <div class="sheet-backdrop" onClick={() => setPanel(false)}>
@@ -386,6 +457,7 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
               <button aria-pressed={prefs.paper} onClick={() => setPrefs({ paper: true })}>Papier</button>
             </div></div>
             <button class="btn teal" onClick={() => setPanel(false)}>Terminé</button>
+            <p class="credit">Mushaf de Médine et écriture officielle : Complexe du Roi Fahd (KFGQPC) · Autres écritures : The Noble Qur'an Encyclopedia · Traduction : Muhammad Hamidullah (tanzil.net)</p>
           </div>
         </div>
       )}
@@ -401,7 +473,74 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
           </div>
         </>
       )}
-      <p class="credit">Mushaf de Médine et écriture officielle : Complexe du Roi Fahd (KFGQPC) · Autres écritures : The Noble Qur'an Encyclopedia · Traduction : Muhammad Hamidullah (tanzil.net)</p>
     </>
+  );
+}
+
+/** Fenêtre « Aller à » : une sourate (avec recherche), un juz ou une page, et le marque-page. */
+function GoTo({ cur, bookmark, onClose, onGo, onBookmark }: {
+  cur: { sura: number; juz: number; page: number };
+  bookmark: { s: number; n: number } | null;
+  onClose: () => void; onGo: (t: ReaderTarget) => void; onBookmark: () => void;
+}) {
+  const [tab, setTab] = useState<'sura' | 'juz' | 'page'>('sura');
+  const [q, setQ] = useState('');
+  const [pg, setPg] = useState(String(cur.page));
+  const list = useRef<HTMLDivElement>(null);
+  // Ouvrir la liste sur la sourate ou le juz en cours.
+  useLayoutEffect(() => {
+    list.current?.querySelector<HTMLElement>('.gorow.cur')?.scrollIntoView({ block: 'center' });
+  }, [tab]);
+  const plain = (x: string) => x.toLowerCase().normalize('NFD').replace(/[̀-ͯ'’\-\s]/g, '');
+  const qq = plain(q.trim());
+  const suras = SURAHS.map((x, i) => ({ x, n: i + 1 })).filter(({ x, n }) =>
+    !qq || String(n) === q.trim() || plain(x[1]).includes(qq) || plain(x[2]).includes(qq) || x[0].includes(q.trim()));
+  const pageNum = Math.min(Math.max(parseInt(pg, 10) || 0, 0), TOTAL_PAGES);
+  return (
+    <div class="sheet-backdrop" onClick={onClose}>
+      <div class="sheet goto" role="dialog" aria-label="Aller à" onClick={(e) => e.stopPropagation()}>
+        <div class="sheet-head"><b>Aller à</b><button class="close" aria-label="Fermer" onClick={onClose}>✕</button></div>
+        <div class="seg goseg" role="tablist">
+          <button role="tab" aria-pressed={tab === 'sura'} onClick={() => setTab('sura')}>Sourate</button>
+          <button role="tab" aria-pressed={tab === 'juz'} onClick={() => setTab('juz')}>Juz</button>
+          <button role="tab" aria-pressed={tab === 'page'} onClick={() => setTab('page')}>Page</button>
+        </div>
+        {bookmark && (
+          <button class="gomark" onClick={onBookmark}>Reprendre au marque-page · {SURAHS[bookmark.s - 1][1]} {bookmark.n}</button>
+        )}
+        {tab === 'sura' && <input class="gosearch" type="search" value={q} placeholder="Chercher une sourate (nom ou numéro)" aria-label="Chercher une sourate"
+          onInput={(e) => setQ((e.target as HTMLInputElement).value)} />}
+        <div class="golist" ref={list}>
+          {tab === 'sura' && suras.map(({ x, n }) => (
+            <button class={`gorow ${n === cur.sura ? 'cur' : ''}`} onClick={() => onGo({ mode: 'sura', sura: n })}>
+              <span class="gono">{n}</span>
+              <span class="gotxt"><b>{x[1]}</b><small>{x[2]} · {x[3]} versets · p. {pageOf(surahVerses(n)[0])}</small></span>
+              <span class="goar">{x[0]}</span>
+            </button>
+          ))}
+          {tab === 'sura' && suras.length === 0 && <p class="note">Aucune sourate ne correspond à « {q} ».</p>}
+          {tab === 'juz' && JUZ_NAMES.map((name, i) => {
+            const [ja] = juzVerses(i + 1), { s: js, n: jn } = posOf(ja);
+            return (
+              <button class={`gorow ${i + 1 === cur.juz ? 'cur' : ''}`} onClick={() => onGo({ mode: 'juz', juz: i + 1 })}>
+                <span class="gono">{i + 1}</span>
+                <span class="gotxt"><b>Juz {i + 1}</b><small>{SURAHS[js - 1][1]} {js}:{jn} · p. {pageOf(ja)}</small></span>
+                <span class="goar">{name}</span>
+              </button>
+            );
+          })}
+          {tab === 'page' && (
+            <form class="gopage" onSubmit={(e) => { e.preventDefault(); if (pageNum >= 1) onGo({ mode: 'page', page: pageNum }); }}>
+              <label for="goto-page">Numéro de page (1 à {TOTAL_PAGES})</label>
+              <div class="gopage-row">
+                <input id="goto-page" type="number" inputMode="numeric" min={1} max={TOTAL_PAGES} value={pg} onInput={(e) => setPg((e.target as HTMLInputElement).value)} />
+                <button class="btn teal" type="submit" disabled={pageNum < 1}>Aller</button>
+              </div>
+              {pageNum >= 1 && <small class="note">Page {pageNum} : {SURAHS[posOf(pageFirstVerse(pageNum)).s - 1][1]}, juz {juzOf(pageFirstVerse(pageNum))}</small>}
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

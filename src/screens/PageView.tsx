@@ -1,5 +1,6 @@
 // Mode page : une page du mushaf de Médine à la fois, ligne par ligne comme le mushaf imprimé.
 // Les pages glissent sous le doigt, comme dans un vrai mushaf : la page suivante arrive par la gauche.
+import { Unwan } from './Unwan';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { isAllah, isRabb, RABB_EXCEPTIONS } from '../data/divine';
 import { ColoredAyah } from './QuranText';
@@ -192,7 +193,7 @@ function Sheet({ lines, page, markAbs, focus }: { lines: MushafLine[]; page: num
       {lines.map((line, li) => {
         if (line[0] === 'H') {
           const s = line[1] as number;
-          return <div class="mline head" key={li}><span class="frame">سورة {SURAHS[s - 1][0]}</span></div>;
+          return <div class="mline head" key={li}><Unwan s={s} /></div>;
         }
         if (line[0] === 'B') return <div class="mline bism-line" key={li}><ColoredAyah text={BISMILLAH} s={1} n={1} /></div>;
         return (

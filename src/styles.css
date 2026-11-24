@@ -444,3 +444,67 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .juzmark::before, .juzmark::after { content: ""; flex: 1; height: 1px; background: currentColor; opacity: .35 }
 .reader.paper .juzmark { color: var(--aya-paper) }
 .sura { scroll-margin-top: calc(var(--top-h, 64px) + 104px) }
+
+/* ---- Lire : barre tout-en-un, barre flottante, « Aller à », unwan ---- */
+.rbar { display: flex; gap: 8px; align-items: center; grid-template-columns: none }
+.where { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: var(--teal-soft); border: 0; border-radius: 16px; padding: 8px 12px; color: var(--ink); text-align: left; font: inherit }
+.where .medal { width: 34px; height: 34px; border-radius: 50%; background: var(--teal); color: var(--on-teal); display: grid; place-items: center; font: 700 13px var(--display); flex: none; font-variant-numeric: tabular-nums }
+.where .wtxt { min-width: 0; display: grid }
+.where b { font-family: var(--display); font-size: 15px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.where .war { font-family: var(--arabic); font-weight: 400; color: var(--saffron); margin-left: 6px }
+.where small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums }
+.where .chev { margin-left: auto; color: var(--teal); font-size: 12px }
+.ibtn { width: 42px; height: 42px; border-radius: 13px; border: 1px solid var(--line); background: var(--surface); color: var(--teal); display: grid; place-items: center; flex: none; padding: 0; font: 700 15px var(--display) }
+.ibtn svg { width: 20px; height: 20px }
+.ibtn.on { background: var(--saffron-soft); color: var(--saffron); border-color: transparent }
+.immersive .rbar { padding-bottom: 10px }
+.rfloat { position: fixed; z-index: 5; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 4px; background: var(--teal); border-radius: 999px; padding: 5px; box-shadow: 0 8px 22px -6px rgba(10, 40, 30, .5); transition: transform .25s ease, opacity .25s ease }
+.rfloat.hide { transform: translate(-50%, 140%); opacity: 0; pointer-events: none }
+.rfloat button { border: 0; border-radius: 999px; background: transparent; color: var(--on-teal); font: 700 13px var(--display); padding: 8px 13px; display: flex; align-items: center; gap: 6px; white-space: nowrap; opacity: .85 }
+.rfloat button[aria-pressed="true"] { background: var(--saffron-soft); color: var(--saffron); opacity: 1 }
+.rfloat svg { width: 16px; height: 16px }
+.focus .rfloat { display: none }
+.verse { cursor: pointer; text-align: right }
+.verse .vh { display: flex; align-items: center; gap: 8px; direction: ltr }
+.verse .ref { font: 700 11.5px var(--body); color: var(--teal); background: var(--teal-soft); border-radius: 999px; padding: 2px 9px; font-variant-numeric: tabular-nums }
+.verse .vmark { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--saffron) }
+.verse .vmore { margin-left: auto; border: 0; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; padding: 2px 8px; border-radius: 8px }
+.verse.marked::before { content: none }
+.verse .fr { color: var(--ink); opacity: .82 }
+.vmenu .vact { border: 0; background: var(--bg); color: var(--ink); text-align: left; font: 700 15px var(--body); padding: 14px 16px; border-radius: 14px }
+.sheet .credit { display: block; font-size: 11.5px; color: var(--muted); margin: 0 }
+.immersive .sheet .credit { display: block }
+.goto { height: 78vh; max-height: 78vh; display: flex; flex-direction: column; overflow: hidden }
+.goseg { display: grid; grid-template-columns: repeat(3, 1fr) }
+.goseg button { padding: 9px 0; font-size: 13px }
+.gomark { border: 0; border-radius: 12px; background: var(--saffron-soft); color: var(--saffron); font: 700 13.5px var(--display); padding: 11px 12px; text-align: left }
+.gosearch { width: 100%; font-size: 16px }
+.golist { flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: start; gap: 2px; overscroll-behavior: contain }
+.gorow { display: flex; align-items: center; gap: 12px; border: 0; background: transparent; color: var(--ink); padding: 9px 6px; border-radius: 12px; text-align: left; font: inherit }
+.gorow.cur { background: var(--teal-soft) }
+.gono { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--saffron); color: var(--saffron); display: grid; place-items: center; font: 700 12px var(--display); flex: none; font-variant-numeric: tabular-nums }
+.gotxt { display: grid; min-width: 0 }
+.gotxt b { font-size: 15px }
+.gotxt small { color: var(--muted); font-size: 12px }
+.goar { margin-left: auto; font-family: var(--arabic); font-size: 19px; color: var(--teal); white-space: nowrap }
+.gopage { display: grid; gap: 10px; padding: 6px 2px }
+.gopage label { font-weight: 700; font-size: 14px }
+.gopage-row { display: flex; gap: 10px }
+.gopage-row input { flex: 1; min-width: 0; font-size: 18px }
+/* unwan : en-tête de sourate, or sur sable */
+.unwan { --uw-ink: var(--saffron); --uw-ground: #F7EEDC; --uw-panel: #F0E0C1; width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto }
+:root[data-theme="dark"] .unwan { --uw-ground: #2A2114; --uw-panel: #33281A }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .unwan { --uw-ground: #2A2114; --uw-panel: #33281A } }
+.unwan .uw-line { fill: none; stroke: var(--uw-ink) }
+.unwan .uw-ground { fill: var(--uw-ground) }
+.unwan .uw-panel { fill: var(--uw-panel) }
+.unwan .uw-ink-fill { fill: var(--uw-ink) }
+.unwan .uw-name { font-family: "KFGQPC Hafs", var(--arabic); font-size: 30px; fill: #8A5A16 }
+:root[data-theme="dark"] .unwan .uw-name { fill: var(--saffron) }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .unwan .uw-name { fill: var(--saffron) } }
+.sura .unwan { margin-bottom: 2px }
+.mline.head .unwan { height: calc(var(--mfs) * 1.9 - 4px); width: auto; max-width: 100% }
+.immersive main { padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px)) }
+.focus main { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) }
+.gosearch { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); -webkit-appearance: none; appearance: none }
+.gopage-row input { border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; background: var(--surface) }
