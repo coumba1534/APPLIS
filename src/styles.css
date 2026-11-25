@@ -493,15 +493,16 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .gopage-row input { flex: 1; min-width: 0; font-size: 18px }
 /* unwan : en-tête de sourate, bandeau vert à rinceaux dorés, cartouche sable, nom calligraphié */
 @font-face { font-family: "surahnames"; src: url("./fonts/sura_names.woff2") format("woff2"); font-display: block }
-.unwan { --uw-band: #1F5C52; --uw-gold: #D39A35; --uw-cart: #F4EAD6; --uw-name: #2E1C12; width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto }
+.unwan { --uw-band: #1F5C52; --uw-gold: #D39A35; --uw-cart: #F4EAD6; --uw-name: #2E1C12; position: relative; width: 100%; max-width: 560px; margin: 0 auto; container-type: inline-size; direction: ltr }
+.unwan svg { width: 100%; height: auto; display: block }
 .unwan .uw-band-fill { fill: var(--uw-band) }
 .unwan .uw-gold-line { fill: none; stroke: var(--uw-gold) }
 .unwan .uw-band-fill.uw-gold-line { fill: var(--uw-band) }
 .unwan .uw-cart-fill.uw-gold-line { fill: var(--uw-cart) }
 .unwan .uw-gold-fill { fill: var(--uw-gold) }
-.unwan .uw-name { font-family: "surahnames"; font-size: 40px; fill: var(--uw-name) }
+.unwan .uw-name { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: "surahnames"; font-size: 6cqw; line-height: 1; white-space: nowrap; color: var(--uw-name); visibility: hidden; font-feature-settings: "liga" 1, "calt" 1 }
 .sura .unwan { margin-bottom: 2px }
-.mline.head .unwan { height: calc(var(--mfs) * 1.9 - 4px); width: auto; max-width: 100% }
+.mline.head .unwan { width: calc((var(--mfs) * 1.9 - 4px) * 600 / 84); max-width: 100% }
 .immersive main { padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px)) }
 .focus main { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) }
 .gosearch { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); -webkit-appearance: none; appearance: none }
