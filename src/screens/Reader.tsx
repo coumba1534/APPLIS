@@ -457,7 +457,7 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
               <button aria-pressed={prefs.paper} onClick={() => setPrefs({ paper: true })}>Papier</button>
             </div></div>
             <button class="btn teal" onClick={() => setPanel(false)}>Terminé</button>
-            <p class="credit">Mushaf de Médine et écriture officielle : Complexe du Roi Fahd (KFGQPC) · Autres écritures : The Noble Qur'an Encyclopedia · Traduction : Muhammad Hamidullah (tanzil.net)</p>
+            <p class="credit">Mushaf de Médine et écriture officielle : Complexe du Roi Fahd (KFGQPC) · Autres écritures : The Noble Qur'an Encyclopedia · Traduction : Muhammad Hamidullah (tanzil.net) · Noms des sourates calligraphiés : police de quran.com (licence MIT)</p>
           </div>
         </div>
       )}

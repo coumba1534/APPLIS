@@ -101,6 +101,7 @@ Le dossier `dist/` contient alors le site complet, à héberger tel quel (par ex
 - **Mushaf de Médine (pages, lignes, juz) et texte de l'écriture officielle** : édition Hafs du Complexe du Roi Fahd (KFGQPC, UthmanicHafs v3.0), via le paquet [@quran.ws/text](https://github.com/quran-ws/quran-text) (CC BY 4.0).
 - **Police KFGQPC HAFS Uthmanic Script** : © Complexe du Roi Fahd pour l'impression du Saint Coran ([fonts.qurancomplex.gov.sa](https://fonts.qurancomplex.gov.sa/)), utilisée sans modification dans une appli gratuite.
 - **Texte arabe pour les autres écritures** : The Noble Qur'an Encyclopedia ([quranenc.com](https://quranenc.com)), via le paquet [quran-json](https://github.com/risan/quran-json) (CC BY-SA 4.0).
+- **Noms des sourates calligraphiés** (en-têtes de sourate) : police `sura_names` de [quran.com](https://github.com/quran/quran.com-frontend-next) (dépôt sous licence MIT).
 - **Traduction française** : Muhammad Hamidullah, via [tanzil.net](https://tanzil.net/trans/fr.hamidullah).
 - **Hizb** (découpage du programme 1) : paquet [quran-meta](https://www.npmjs.com/package/quran-meta) (MIT).
 

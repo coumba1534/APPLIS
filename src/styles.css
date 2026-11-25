@@ -491,17 +491,15 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .gopage label { font-weight: 700; font-size: 14px }
 .gopage-row { display: flex; gap: 10px }
 .gopage-row input { flex: 1; min-width: 0; font-size: 18px }
-/* unwan : en-tête de sourate, or sur sable */
-.unwan { --uw-ink: var(--saffron); --uw-ground: #F7EEDC; --uw-panel: #F0E0C1; width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto }
-:root[data-theme="dark"] .unwan { --uw-ground: #2A2114; --uw-panel: #33281A }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .unwan { --uw-ground: #2A2114; --uw-panel: #33281A } }
-.unwan .uw-line { fill: none; stroke: var(--uw-ink) }
-.unwan .uw-ground { fill: var(--uw-ground) }
-.unwan .uw-panel { fill: var(--uw-panel) }
-.unwan .uw-ink-fill { fill: var(--uw-ink) }
-.unwan .uw-name { font-family: "KFGQPC Hafs", var(--arabic); font-size: 30px; fill: #8A5A16 }
-:root[data-theme="dark"] .unwan .uw-name { fill: var(--saffron) }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .unwan .uw-name { fill: var(--saffron) } }
+/* unwan : en-tête de sourate, bandeau vert à rinceaux dorés, cartouche sable, nom calligraphié */
+@font-face { font-family: "surahnames"; src: url("./fonts/sura_names.woff2") format("woff2"); font-display: block }
+.unwan { --uw-band: #1F5C52; --uw-gold: #D39A35; --uw-cart: #F4EAD6; --uw-name: #2E1C12; width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto }
+.unwan .uw-band-fill { fill: var(--uw-band) }
+.unwan .uw-gold-line { fill: none; stroke: var(--uw-gold) }
+.unwan .uw-band-fill.uw-gold-line { fill: var(--uw-band) }
+.unwan .uw-cart-fill.uw-gold-line { fill: var(--uw-cart) }
+.unwan .uw-gold-fill { fill: var(--uw-gold) }
+.unwan .uw-name { font-family: "surahnames"; font-size: 40px; fill: var(--uw-name) }
 .sura .unwan { margin-bottom: 2px }
 .mline.head .unwan { height: calc(var(--mfs) * 1.9 - 4px); width: auto; max-width: 100% }
 .immersive main { padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px)) }
