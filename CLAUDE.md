@@ -36,7 +36,7 @@ Maquette : https://claude.ai/artifact/N2red9a8keoGj6YJorP27n. Après « Rejoindr
 
 ## Questions encore ouvertes
 
-1. **Nom de l'appli** : « Khatam entre sœurs » ne convient plus à un public mixte (idées : « Khatam Ensemble », « Mon Khatam »). Le nom est centralisé dans `src/brand.ts` (+ manifeste, `index.html`, README).
+1. **Nom et logo** : décidé, l'appli s'appellera **« Khatm »** (forme correcte : khatm al-Qur'an), écran d'ouverture « Khatm al-Qur'an ». À faire : remplacer « khatam » par « khatm » dans tous les textes, nom dans `src/brand.ts` (+ manifeste, `index.html`, README). Logo pas encore choisi (maquette https://claude.ai/artifact/SVD9WBig6GSxkmhLxHLuJJ : elle hésite entre le mushaf ouvert D et le mot ختم C) ; écran d'ouverture foncé ou clair à choisir. Sur iPhone, il faudra sans doute réinstaller l'appli pour voir le nouveau nom et la nouvelle icône (vérifier avant que la progression ne se perd pas).
 2. **Connexion pour les groupes** : prénom seul (recommandé pour le test) ou Google.
 3. **Visibilité dans un groupe** : tous les membres voient la progression de tous (proposé) ou seulement l'administrateur.
 4. **Programme des mosquées** pour le Ramadan : si elle le trouve, l'ajouter dans `config.json` (29 versets de début de jour).
