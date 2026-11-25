@@ -1,5 +1,7 @@
 import { useState } from 'preact/hooks';
 import { update, getState, newId, todayISO } from '../store';
+import type { Gender } from '../store';
+import { GenderChoice } from './Profile';
 import { ramadanStart } from '../config';
 import { APP_NAME } from '../brand';
 import { allProgrammes, sessionsFor } from '../data/programmes';
@@ -11,6 +13,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const init = getState();
   const [step, setStep] = useState(0);
   const [name, setName] = useState(init.name);
+  const [gender, setGender] = useState<Gender | null>(init.gender ?? null);
   const [prog, setProg] = useState(init.programmeId);
   const [code, setCode] = useState(init.groupCode);
   const [dur, setDur] = useState<'ramadan' | '30' | '60' | '90'>('30');
@@ -21,7 +24,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
   const finish = async (askNotif: boolean) => {
     update({
-      onboarded: true, name: name.trim(), programmeId: prog, groupCode: code.trim().toUpperCase(),
+      onboarded: true, name: name.trim(), gender, programmeId: prog, groupCode: code.trim().toUpperCase(),
       khatam: { id: newId(), kind: dur === 'ramadan' ? 'ramadan' : 'custom', name: khatamName(dur, days), days, start: dur === 'ramadan' ? ramadanStart() : todayISO(), ...(dur === 'ramadan' ? { followsConfig: true } : {}) },
       done: [], sessions: {}, catchPlan: null,
     });
@@ -34,6 +37,8 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       <h1>Assalamou alaykoum 🌙</h1>
       <p>Bienvenue dans {APP_NAME} : lisez le Coran en entier, à votre rythme, et ensemble.</p>
       <label class="field">Votre prénom<input type="text" value={name} placeholder="Ex. Aminata ou Moussa" autocomplete="given-name" onInput={(e) => setName((e.target as HTMLInputElement).value)} /></label>
+      <div class="field">Vous êtes<GenderChoice value={gender} onChange={setGender} /></div>
+      <p class="note">Pour les groupes : ils ne sont pas mixtes. Un groupe de sœurs n'accueille que des sœurs, un groupe de frères que des frères.</p>
     </>,
     <>
       <h1>Quelle durée pour votre khatm ?</h1>
@@ -77,7 +82,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             ? <button class="link" onClick={() => setStep(step - 1)}>Retour</button>
             : <button class="link" onClick={() => finish(false)}>Passer</button>}
           {step < 4
-            ? <button class="btn teal" onClick={() => setStep(step + 1)}>Continuer</button>
+            ? <button class="btn teal" disabled={step === 0 && !gender} onClick={() => setStep(step + 1)}>Continuer</button>
             : <button class="btn teal" onClick={() => finish(true)}>Autoriser les rappels</button>}
         </div>
       </div>

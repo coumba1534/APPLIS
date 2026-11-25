@@ -8,6 +8,7 @@ import { toast } from '../ui';
 import { InstallCard } from './InstallCard';
 import { RamadanBanner } from './RamadanBanner';
 import { Moon } from './RamadanArt';
+import { GenderCard } from './Profile';
 
 export function streak(s: State, id: TrackId | null = activeTrackId(s)) {
   const t = id ? getTrack(s, id) : null;
@@ -54,6 +55,7 @@ export function Today(props: Props) {
   const paused = isPaused(s);
   return (
     <>
+      <GenderCard />
       {s.ramadanEnded && (
         <div class="card ramadan-end">
           <h3>{s.ramadanEnded.finished ? `${s.ramadanEnded.name} : khatm terminé` : `${s.ramadanEnded.name} est terminé`}</h3>

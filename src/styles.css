@@ -507,3 +507,10 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .focus main { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) }
 .gosearch { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--surface); -webkit-appearance: none; appearance: none }
 .gopage-row input { border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; background: var(--surface) }
+
+/* Choix homme / femme (groupes non mixtes) */
+.gchoice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.gchoice button { border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 14px; padding: 12px; font: 700 15px var(--display) }
+.gchoice button[aria-checked="true"] { border-color: var(--teal); background: var(--teal-soft); color: var(--teal) }
+.gender-card { border-color: var(--saffron); background: var(--saffron-soft) }
+.btn:disabled { opacity: .45 }

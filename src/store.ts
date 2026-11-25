@@ -75,10 +75,14 @@ export interface HistoryItem {
   progress?: { done: number[]; sessions: Record<string, number[]>; catchPlan: CatchPlan | null };
 }
 
+export type Gender = 'f' | 'm';
+
 export interface State {
   version: 2;
   onboarded: boolean;
   name: string;
+  /** Homme ou femme : les groupes ne sont pas mixtes (null tant que la question n'a pas été posée). */
+  gender: Gender | null;
   groupCode: string;
   programmeId: string;
   /** Séances du programme personnalisé. */
@@ -132,6 +136,7 @@ const initial: State = {
   version: 2,
   onboarded: false,
   name: '',
+  gender: null,
   groupCode: '',
   programmeId: 'p1',
   customProgramme: [],

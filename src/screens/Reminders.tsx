@@ -1,3 +1,4 @@
+import { ProfileCard } from './Profile';
 import { useState } from 'preact/hooks';
 import { useStore, update, currentDay, setReminderTime, activeTrackId, getTrack, simulateRamadan, setRamadanSetup, formatDate, addDays, todayISO } from '../store';
 import { useConfig, ramadanTest, ramadanEnd } from '../config';
@@ -59,6 +60,8 @@ export function Reminders() {
             onChange={() => update({ reminders: { ...s.reminders, lateEvening: !s.reminders.lateEvening } })} />
         </div>
       </div>
+      <h2>Mon profil</h2>
+      <ProfileCard />
       {config.testMode && <TestTools />}
     </>
   );
