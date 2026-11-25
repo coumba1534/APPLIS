@@ -230,35 +230,10 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
     return () => document.body.classList.remove('focus');
   }, [focusMode]);
 
-  // Fenêtre de réglages : on peut la fermer en la faisant glisser vers le bas.
-  const sheet = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ y: number; dy: number; t: number } | null>(null);
-  const onSheetTouchStart = (e: TouchEvent) => {
-    const el = sheet.current;
-    if (!el || el.scrollTop > 0) return; // on fait défiler le contenu, pas la fenêtre
-    drag.current = { y: e.touches[0].clientY, dy: 0, t: Date.now() };
-  };
-  const onSheetTouchMove = (e: TouchEvent) => {
-    const d = drag.current, el = sheet.current;
-    if (!d || !el) return;
-    d.dy = Math.max(0, e.touches[0].clientY - d.y);
-    if (d.dy > 0) {
-      e.preventDefault();
-      el.style.transition = 'none';
-      el.style.transform = `translateY(${d.dy}px)`;
-    }
-  };
-  const onSheetTouchEnd = () => {
-    const d = drag.current, el = sheet.current;
-    drag.current = null;
-    if (!d || !el) return;
-    const fast = d.dy > 40 && d.dy / (Date.now() - d.t) > 0.6;
-    el.style.transition = 'transform .22s ease-out';
-    if (d.dy > el.offsetHeight * 0.25 || fast) {
-      el.style.transform = 'translateY(100%)';
-      window.setTimeout(() => setPanel(false), 200);
-    } else el.style.transform = '';
-  };
+  // Fenêtres du bas (réglages, menu d'un verset) : on peut les fermer en les faisant glisser vers le bas.
+  const settingsSwipe = useSwipeClose(() => setPanel(false));
+  const verseSwipe = useSwipeClose(() => setVerseMenu(null));
+
 
   const removeBookmark = () => { update({ bookmark: null }); toast('Marque-page retiré'); };
   const mark = (abs: number) => {
@@ -352,7 +327,7 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
             <b>{SURAHS[curSura - 1][1]}<span class="war">{SURAHS[curSura - 1][0]}</span></b>
             <small>Page {curPage} · Juz {curJuz} · Hizb {curHizb}</small>
           </span>
-          <span class="chev" aria-hidden="true">▾</span>
+          <svg class="chev" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
         </button>
         <button class={`ibtn ${s.bookmark ? 'on' : ''}`} aria-label={s.bookmark ? 'Aller au marque-page' : 'Marque-page'} onClick={goBookmark}>
           <svg viewBox="0 0 24 24" fill={s.bookmark ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z" /></svg>
@@ -387,7 +362,7 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
         const close = () => setVerseMenu(null);
         return (
           <div class="sheet-backdrop" onClick={close}>
-            <div class="sheet vmenu" role="dialog" aria-label={`Verset ${vs}:${vn}`} onClick={(e) => e.stopPropagation()}>
+            <div class="sheet vmenu" role="dialog" aria-label={`Verset ${vs}:${vn}`} onClick={(e) => e.stopPropagation()} {...verseSwipe}>
               <div class="sheet-head"><b>{SURAHS[vs - 1][1]} · verset {vn}</b><button class="close" aria-label="Fermer" onClick={close}>✕</button></div>
               <button class="vact" onClick={() => { mark(v); close(); }}>{v === markAbs ? 'Retirer le marque-page' : 'Poser le marque-page ici'}</button>
               <button class="vact" onClick={async () => {
@@ -404,8 +379,7 @@ export function Reader({ target, setTarget, onTitle, start = 'resume' }: {
 
       {panel && (
         <div class="sheet-backdrop" onClick={() => setPanel(false)}>
-          <div class="sheet" role="dialog" aria-label="Réglages de lecture" ref={sheet} onClick={(e) => e.stopPropagation()}
-            onTouchStart={onSheetTouchStart} onTouchMove={onSheetTouchMove} onTouchEnd={onSheetTouchEnd}>
+          <div class="sheet" role="dialog" aria-label="Réglages de lecture" onClick={(e) => e.stopPropagation()} {...settingsSwipe}>
             <div class="sheet-head">
               <b>Réglages de lecture</b>
               <button class="close" aria-label="Fermer" onClick={() => setPanel(false)}>✕</button>
@@ -487,6 +461,7 @@ function GoTo({ cur, bookmark, onClose, onGo, onBookmark }: {
   const [q, setQ] = useState('');
   const [pg, setPg] = useState(String(cur.page));
   const list = useRef<HTMLDivElement>(null);
+  const swipe = useSwipeClose(onClose);
   // Ouvrir la liste sur la sourate ou le juz en cours.
   useLayoutEffect(() => {
     list.current?.querySelector<HTMLElement>('.gorow.cur')?.scrollIntoView({ block: 'center' });
@@ -498,7 +473,7 @@ function GoTo({ cur, bookmark, onClose, onGo, onBookmark }: {
   const pageNum = Math.min(Math.max(parseInt(pg, 10) || 0, 0), TOTAL_PAGES);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet goto" role="dialog" aria-label="Aller à" onClick={(e) => e.stopPropagation()}>
+      <div class="sheet goto" role="dialog" aria-label="Aller à" onClick={(e) => e.stopPropagation()} {...swipe}>
         <div class="sheet-head"><b>Aller à</b><button class="close" aria-label="Fermer" onClick={onClose}>✕</button></div>
         <div class="seg goseg" role="tablist">
           <button role="tab" aria-pressed={tab === 'sura'} onClick={() => setTab('sura')}>Sourate</button>
@@ -543,4 +518,45 @@ function GoTo({ cur, bookmark, onClose, onGo, onBookmark }: {
       </div>
     </div>
   );
+}
+
+/**
+ * Fermer une fenêtre du bas en la faisant glisser vers le bas.
+ * Le geste ne démarre que si le contenu touché est déjà tout en haut (sinon on fait défiler la liste).
+ */
+function useSwipeClose(onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; dy: number; t: number } | null>(null);
+  const onTouchStart = (e: TouchEvent) => {
+    const el = ref.current;
+    if (!el) return;
+    // Remonter du point touché jusqu'à la fenêtre : si une zone qui défile n'est pas en haut, on la laisse défiler.
+    for (let n = e.target as HTMLElement | null; n && n !== el.parentElement; n = n.parentElement) {
+      if (n.scrollTop > 0) return;
+      if (n === el) break;
+    }
+    drag.current = { y: e.touches[0].clientY, dy: 0, t: Date.now() };
+  };
+  const onTouchMove = (e: TouchEvent) => {
+    const d = drag.current, el = ref.current;
+    if (!d || !el) return;
+    d.dy = Math.max(0, e.touches[0].clientY - d.y);
+    if (d.dy > 0) {
+      e.preventDefault();
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${d.dy}px)`;
+    }
+  };
+  const onTouchEnd = () => {
+    const d = drag.current, el = ref.current;
+    drag.current = null;
+    if (!d || !el) return;
+    const fast = d.dy > 40 && d.dy / (Date.now() - d.t) > 0.6;
+    el.style.transition = 'transform .22s ease-out';
+    if (d.dy > el.offsetHeight * 0.25 || fast) {
+      el.style.transform = 'translateY(100%)';
+      window.setTimeout(onClose, 200);
+    } else el.style.transform = '';
+  };
+  return { ref, onTouchStart, onTouchMove, onTouchEnd };
 }
