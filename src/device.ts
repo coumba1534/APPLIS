@@ -1,4 +1,5 @@
 // Installation sur l'écran d'accueil et notifications.
+import { pushActive, enablePush } from './push';
 import { getState, todayISO, update, currentDay, getTrack, activeTrackId, closeRamadanIfOver, currentRamadanId, formatDate, canJoinRamadan } from './store';
 import { ramadanVisible, ramadanName, ramadanStart, daysToRamadan } from './config';
 import { programmeOf, sessionsFor } from './data/programmes';
@@ -30,7 +31,10 @@ export const notificationPermission = () => (notificationsSupported() ? Notifica
 
 export async function askNotifications() {
   if (!notificationsSupported()) return 'denied' as NotificationPermission;
-  return Notification.requestPermission();
+  const p = await Notification.requestPermission();
+  // Autorisé : on abonne le téléphone au programme d'envoi (notifications même appli fermée).
+  if (p === 'granted') void enablePush();
+  return p;
 }
 
 export async function notify(title: string, body: string, tag?: string) {
@@ -69,7 +73,8 @@ export const ramadanNotifications = {
 export function startReminders() {
   const tick = () => {
     closeRamadanIfOver();
-    if (notificationPermission() !== 'granted') return;
+    // Les rappels passent par le programme d'envoi (même appli fermée) : pas de doublon.
+    if (notificationPermission() !== 'granted' || pushActive()) return;
     const s = getState();
     const date = todayISO();
 

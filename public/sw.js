@@ -1,5 +1,5 @@
 // Service worker : l'appli et le texte du Coran restent disponibles sans connexion.
-const VERSION = 'v9';
+const VERSION = 'v10';
 const CACHE = `khatam-${VERSION}`;
 // Chemins relatifs à l'emplacement du service worker (racine du site ou sous-dossier).
 const ROOT = new URL('./', self.location).href;
@@ -53,6 +53,15 @@ self.addEventListener('fetch', (event) => {
       return cached || network;
     }),
   );
+});
+
+// Notification envoyée par le programme d'envoi (appli fermée) : on l'affiche.
+self.addEventListener('push', (event) => {
+  let msg = { title: 'Khatm', body: '' };
+  try { msg = { ...msg, ...event.data.json() }; } catch { /* message vide */ }
+  event.waitUntil(self.registration.showNotification(msg.title, {
+    body: msg.body, tag: msg.tag || undefined, icon: ROOT + 'icons/icon-192.png', badge: ROOT + 'icons/icon-192.png',
+  }));
 });
 
 // Ouvrir l'appli quand on touche une notification.

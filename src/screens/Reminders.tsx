@@ -1,4 +1,5 @@
 import { ProfileCard } from './Profile';
+import { pushActive, testPush } from '../push';
 import { useState } from 'preact/hooks';
 import { useStore, update, currentDay, setReminderTime, activeTrackId, getTrack, simulateRamadan, setRamadanSetup, formatDate, addDays, todayISO } from '../store';
 import { useConfig, ramadanTest, ramadanEnd } from '../config';
@@ -30,14 +31,21 @@ export function Reminders() {
         ) : perm === 'granted' ? (
           <>
             <p>Les rappels sont autorisés.</p>
-            <button class="ghost" style="justify-self:start" onClick={() => notify(APP_NAME, 'Ceci est un rappel de test. Bismillah !').then(() => toast('Rappel de test envoyé'))}>Envoyer un rappel de test</button>
+            {pushActive() ? (
+              <>
+                <p class="note">Les rappels arrivent même quand l'appli est fermée.</p>
+                <button class="ghost" style="justify-self:start" onClick={() => testPush(60).then((ok) => toast(ok ? 'Rappel de test dans une minute : fermez l\'appli pour le voir arriver' : "Le rappel de test n'a pas pu être programmé"))}>Rappel de test (dans 1 minute)</button>
+              </>
+            ) : (
+              <button class="ghost" style="justify-self:start" onClick={() => notify(APP_NAME, 'Ceci est un rappel de test. Bismillah !').then(() => toast('Rappel de test envoyé'))}>Envoyer un rappel de test</button>
+            )}
           </>
         ) : perm === 'denied' ? (
           <p>Les notifications sont bloquées. Autorisez-les dans les réglages du téléphone pour cette appli.</p>
         ) : (
           <button class="btn teal" onClick={() => askNotifications().then((p) => { setPerm(p); toast(p === 'granted' ? 'Rappels autorisés' : 'Rappels non autorisés'); })}>Autoriser les rappels</button>
         )}
-        <p class="note">Pour l'instant, les rappels arrivent quand l'appli est ouverte ou utilisée récemment. Les rappels appli fermée arriveront avec l'étape Firebase.</p>
+        {!pushActive() && <p class="note">Une fois les rappels autorisés, ils arrivent même quand l'appli est fermée (appli installée sur l'écran d'accueil, iOS 16.4 ou plus récent).</p>}
       </div>
 
       <h2>Un rappel par séance</h2>

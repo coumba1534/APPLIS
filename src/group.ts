@@ -15,6 +15,7 @@ import { getState, update, subscribe, todayISO } from './store';
 import type { Gender, GroupState } from './store';
 import { currentRamadanId } from './store';
 import { ramadanStart, RAMADAN_KHATAM_DAYS } from './config';
+import { pushGroupMessage, linkPushToAccount } from './push';
 
 export const firebaseConfig = {
   apiKey: 'AIzaSyDEoKtwujMNofsciYLoxzipw2-mrcWA6JU',
@@ -44,6 +45,8 @@ export function fb(): Promise<Fb> {
       if (emu) { authMod.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true }); fs.connectFirestoreEmulator(db, '127.0.0.1', 8085); }
       await auth.authStateReady();
       if (!auth.currentUser) await authMod.signInAnonymously(auth);
+      // Les messages de groupe (demande acceptée, retrait…) arrivent aussi appli fermée.
+      void auth.currentUser!.getIdToken().then(linkPushToAccount).catch(() => {});
       return { app, auth, db, fs, uid: auth.currentUser!.uid };
     })();
     fbPromise.catch(() => { fbPromise = null; });
@@ -141,6 +144,11 @@ export async function requestJoin(info: GroupInfo) {
   const { db, fs, uid } = await fb();
   await fs.setDoc(fs.doc(db, 'groups', info.id, 'requests', uid), { name: s.name || 'Sans prénom', gender: s.gender, at: fs.serverTimestamp() });
   update({ groupRequest: { groupId: info.id, code: info.code, name: info.name, at: todayISO() } });
+  // Prévenir l'administrateur qu'une demande l'attend.
+  try {
+    const { auth } = await fb();
+    await pushGroupMessage({ idToken: await auth.currentUser!.getIdToken(), target: info.adminUid, type: 'request', groupId: info.id, from: s.name });
+  } catch { /* sans réseau : il la verra à l'ouverture */ }
 }
 
 export async function cancelRequest() {
@@ -154,8 +162,10 @@ export async function cancelRequest() {
 // ---- Administration ----
 
 async function notifyMember(memberUid: string, type: 'accepted' | 'refused' | 'removed', g: { id: string; name: string }) {
-  const { db, fs } = await fb();
+  const { db, fs, auth } = await fb();
   await fs.addDoc(fs.collection(db, 'notices', memberUid, 'items'), { type, groupId: g.id, groupName: g.name, at: fs.serverTimestamp() });
+  // Et une vraie notification sur son téléphone, même appli fermée.
+  try { await pushGroupMessage({ idToken: await auth.currentUser!.getIdToken(), target: memberUid, type, groupId: g.id }); } catch { /* sans réseau : le message s'affichera à l'ouverture */ }
 }
 
 export async function acceptRequest(reqUid: string, req: { name: string; gender: Gender }) {
