@@ -7,6 +7,7 @@ import { allProgrammes, sessionsFor, DEFAULT_CUSTOM, CUSTOM_ID, MAX_CUSTOM_SESSI
 import { portion, dayLabel, pagesLabel, portionPages, pageSpan, juzTitle } from '../data/khatam';
 import { toast } from '../ui';
 import { RamadanBanner } from './RamadanBanner';
+import { leaveGroup, useLive } from '../group';
 
 export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
   const s = useStore();
@@ -24,6 +25,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
   const [stopping, setStopping] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const r = s.ramadan;
+  const live = useLive();
   const rDay = currentDay(s, 'ramadan');
   const paused = isPaused(s);
   /** Khatam du Ramadan rejoint et pas encore terminé : l'onglet montre d'abord son rythme et son calendrier. */
@@ -68,9 +70,16 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
         <div class="confirm">
           <p><b>Votre progression sera perdue.</b> {r!.done.length > 0
             ? `Vous avez lu ${r!.done.length} jour${r!.done.length > 1 ? 's' : ''} sur 29, et ce khatm ne pourra pas être repris là où vous en êtes : seulement recommencé depuis le début.`
-            : 'Il ne pourra pas être repris là où vous en êtes.'}{s.khatam && !s.khatam.finishedOn ? ' Votre khatm personnel reprendra dès demain.' : ''}</p>
+            : 'Il ne pourra pas être repris là où vous en êtes.'}{s.khatam && !s.khatam.finishedOn ? ' Votre khatm personnel reprendra dès demain.' : ''}{s.group?.purpose === 'ramadan' ? ` Vous quitterez aussi le groupe « ${s.group.name} ».` : ''}</p>
           <div class="actions-row">
-            <button class="btn danger-fill" onClick={() => { leaveRamadan(); setLeaving(false); toast('Khatm du Ramadan quitté'); }}>Quitter quand même</button>
+            <button class="btn danger-fill" onClick={async () => {
+              // Dans un groupe du Ramadan, quitter le khatm du Ramadan, c'est aussi quitter le groupe.
+              if (s.group?.purpose === 'ramadan') {
+                try { await leaveGroup(live.members.map((m) => ({ uid: m.uid, name: m.name, joinedOn: m.joinedOn }))); }
+                catch { toast('Impossible pour le moment : vérifiez la connexion.'); return; }
+              }
+              leaveRamadan(); setLeaving(false); toast('Khatm du Ramadan quitté');
+            }}>Quitter quand même</button>
             <button class="ghost" onClick={() => setLeaving(false)}>Annuler</button>
           </div>
         </div>
@@ -187,7 +196,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
                   </div>
                   {!asking && (
                     <div class="hist-actions">
-                      {h.status === 'stopped' && !active && !h.id.startsWith('ramadan-') && <button class="ghost" onClick={() => setPending({ id: h.id, action: 'resume' })}>Reprendre</button>}
+                      {h.status === 'stopped' && !active && !h.id.startsWith('ramadan-') && !h.id.startsWith('groupe-') && <button class="ghost" onClick={() => setPending({ id: h.id, action: 'resume' })}>Reprendre</button>}
                       <button class="ghost danger" onClick={() => setPending({ id: h.id, action: 'delete' })}>Supprimer</button>
                     </div>
                   )}

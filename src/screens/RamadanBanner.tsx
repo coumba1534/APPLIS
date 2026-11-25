@@ -20,6 +20,8 @@ export function RamadanBanner({ always = false }: { always?: boolean }) {
   // Clé de masquage : une pour l'annonce, une pour le mois (l'ancienne valeur, la date seule, vaut pour l'annonce).
   const hideKey = `${start}:${before ? 'annonce' : 'mois'}`;
   const hidden = !always && (s.hideRamadanBanner === hideKey || (before && s.hideRamadanBanner === start));
+  // Dans un groupe du Ramadan : le khatm du Ramadan démarre tout seul au 1er jour.
+  if (s.group?.purpose === 'ramadan') return null;
   if (!ramadanVisible() || s.ramadan || ramadanDoneThisYear(s) || hidden || (!before && !open)) return null;
   const personal = hasActiveKhatam(s) ? s.khatam : null;
   const restart = s.history.some((h) => h.kind === 'ramadan' && h.status === 'stopped' && h.start === start);

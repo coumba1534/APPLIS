@@ -70,6 +70,12 @@ export interface GroupState {
   name: string;
   /** Groupe classique (sœurs ou frères) ou encadré (une section Sœurs et une section Frères). */
   kind: 'classic' | 'guided';
+  /** Groupe du Ramadan (le khatm du Ramadan, fait ensemble) ou groupe de lecture (toute l'année). */
+  purpose: 'ramadan' | 'reading';
+  /** Groupe du Ramadan : le Ramadan concerné (`currentRamadanId`). */
+  season: string;
+  /** L'ouverture festive a été vue. */
+  welcomed?: boolean;
   /** Groupe classique : réservé aux femmes ('f') ou aux hommes ('m'). */
   gender: Gender | null;
   role: 'admin' | 'member';
@@ -297,7 +303,7 @@ const ramadanDaysBetween = (a: string, b: string) => overlap(ramadanStart(), ram
 /** Vrai si le khatm du groupe est en pause aujourd'hui (Ramadan). */
 export function groupPaused(s: State = state) {
   const t = todayISO();
-  return !!s.group && t >= s.group.khatam.start && t >= ramadanStart() && t <= ramadanEnd();
+  return !!s.group && s.group.purpose !== 'ramadan' && t >= s.group.khatam.start && t >= ramadanStart() && t <= ramadanEnd();
 }
 
 /** Dernier jour d'un khatam (le khatam personnel et celui du groupe sont prolongés de leurs jours de pause). */

@@ -73,7 +73,7 @@ service cloud.firestore {
         allow create: if signedIn() && (
           (uid == me() && grpAfter(gid).adminUid == me())
           || (isAdmin(gid) && hasRequest(gid, uid)));
-        allow update: if uid == me() && onlyChanged(['doneCount']);
+        allow update: if uid == me() && onlyChanged(['doneCount', 'done']);
         allow delete: if signedIn() && (uid == me() || isAdmin(gid));
       }
 

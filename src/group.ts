@@ -13,6 +13,8 @@ import type { Firestore, Unsubscribe } from 'firebase/firestore';
 import { useEffect, useState } from 'preact/hooks';
 import { getState, update, subscribe, todayISO } from './store';
 import type { Gender, GroupState } from './store';
+import { currentRamadanId } from './store';
+import { ramadanStart, RAMADAN_KHATAM_DAYS } from './config';
 
 export const firebaseConfig = {
   apiKey: 'AIzaSyDEoKtwujMNofsciYLoxzipw2-mrcWA6JU',
@@ -60,18 +62,20 @@ export const inviteLink = (code: string) => `${location.origin}${location.pathna
 /** Ce qu'on sait d'un groupe avant d'y entrer. */
 export interface GroupInfo {
   id: string; code: string; name: string; kind: 'classic' | 'guided'; gender: Gender | null;
+  purpose: 'ramadan' | 'reading'; season: string;
   adminUid: string; adminName: string; days: number; start: string; programmeId: string; memberCount: number;
 }
 
 const toInfo = (id: string, d: Record<string, unknown>): GroupInfo => ({
   id, code: String(d.code), name: String(d.name), kind: d.kind === 'guided' ? 'guided' : 'classic', gender: (d.gender as Gender) ?? null,
+  purpose: d.purpose === 'ramadan' ? 'ramadan' : 'reading', season: String(d.season ?? ''),
   adminUid: String(d.adminUid), adminName: String(d.adminName), days: Number(d.days), start: String(d.start),
   programmeId: String(d.programmeId), memberCount: Number(d.memberCount ?? 0),
 });
 
 function localGroup(info: GroupInfo, role: 'admin' | 'member', section: Gender, joinedOn: string): GroupState {
   return {
-    id: info.id, code: info.code, name: info.name, kind: info.kind, gender: info.gender, role, section,
+    id: info.id, code: info.code, name: info.name, kind: info.kind, gender: info.gender, purpose: info.purpose, season: info.season, welcomed: false, role, section,
     adminUid: info.adminUid, adminName: info.adminName, programmeId: info.programmeId,
     khatam: { id: `groupe-${info.id}`, kind: 'group', name: info.name, start: info.start, days: info.days },
     done: [], sessions: {}, catchPlan: null, joinedOn,
@@ -80,7 +84,9 @@ function localGroup(info: GroupInfo, role: 'admin' | 'member', section: Gender, 
 
 // ---- Créer, chercher, demander ----
 
-export async function createGroup(p: { name: string; kind: 'classic' | 'guided'; days: number; start: string; programmeId: string }) {
+export async function createGroup(p: { name: string; kind: 'classic' | 'guided'; purpose: 'ramadan' | 'reading'; days: number; start: string; programmeId: string }) {
+  // Groupe du Ramadan : le khatm du Ramadan, 29 jours, aux dates du Ramadan.
+  if (p.purpose === 'ramadan') p = { ...p, days: RAMADAN_KHATAM_DAYS, start: ramadanStart() };
   const s = getState();
   if (!s.gender) throw new Error('genre');
   const { db, fs, uid } = await fb();
@@ -93,6 +99,7 @@ export async function createGroup(p: { name: string; kind: 'classic' | 'guided';
   if (!code) throw new Error('code');
   const info: GroupInfo = {
     id: ref.id, code, name: p.name.trim(), kind: p.kind, gender: p.kind === 'classic' ? s.gender : null,
+    purpose: p.purpose, season: p.purpose === 'ramadan' ? currentRamadanId() : '',
     adminUid: uid, adminName: s.name || 'Administrateur', days: p.days, start: p.start, programmeId: p.programmeId, memberCount: 1,
   };
   const batch = fs.writeBatch(db);
@@ -100,7 +107,7 @@ export async function createGroup(p: { name: string; kind: 'classic' | 'guided';
   batch.set(ref, { ...doc, createdAt: fs.serverTimestamp() });
   batch.set(fs.doc(db, 'codes', code), { groupId: ref.id });
   batch.set(fs.doc(db, 'groups', ref.id, 'members', uid), { name: info.adminName, gender: s.gender, section: s.gender, role: 'admin', joinedOn: todayISO(), done: [], sessions: {} });
-  batch.set(fs.doc(db, 'groups', ref.id, 'stats', uid), { section: s.gender, doneCount: 0 });
+  batch.set(fs.doc(db, 'groups', ref.id, 'stats', uid), { section: s.gender, doneCount: 0, done: [] });
   await batch.commit();
   update({ group: localGroup(info, 'admin', s.gender, todayISO()), groupRequest: null });
   return info;
@@ -120,6 +127,7 @@ export async function findGroup(codeInput: string): Promise<GroupInfo | null> {
 /** Peut-on demander à entrer ? Pas de mixité dans les groupes classiques, et une limite de membres. */
 export function joinBlock(info: GroupInfo, gender: Gender | null): string | null {
   if (!gender) return 'Indiquez d\'abord dans « Mon profil » (onglet Rappels) si vous êtes une femme ou un homme.';
+  if (info.purpose === 'ramadan' && info.season !== currentRamadanId()) return 'Ce groupe était pour un autre Ramadan.';
   if (info.kind === 'classic' && info.gender && info.gender !== gender)
     return info.gender === 'f' ? 'Ce groupe est réservé aux sœurs.' : 'Ce groupe est réservé aux frères.';
   if (info.memberCount >= MAX_MEMBERS[info.kind]) return 'Ce groupe est complet.';
@@ -160,7 +168,7 @@ export async function acceptRequest(reqUid: string, req: { name: string; gender:
     const count = Number(snap.data()?.memberCount ?? 0);
     if (count >= MAX_MEMBERS[g.kind]) throw new Error('complet');
     tx.set(fs.doc(db, 'groups', g.id, 'members', reqUid), { name: req.name, gender: req.gender, section: req.gender, role: 'member', joinedOn: todayISO(), done: [], sessions: {} });
-    tx.set(fs.doc(db, 'groups', g.id, 'stats', reqUid), { section: req.gender, doneCount: 0 });
+    tx.set(fs.doc(db, 'groups', g.id, 'stats', reqUid), { section: req.gender, doneCount: 0, done: [] });
     tx.delete(fs.doc(db, 'groups', g.id, 'requests', reqUid));
     tx.update(gref, { memberCount: count + 1 });
   });
@@ -217,7 +225,7 @@ export async function leaveGroup(others: { uid: string; name: string; joinedOn: 
 // ---- Synchronisation ----
 
 export interface Member { uid: string; name: string; gender: Gender; section: Gender; role: 'admin' | 'member'; joinedOn: string; done: number[] }
-export interface Stat { uid: string; section: Gender; doneCount: number }
+export interface Stat { uid: string; section: Gender; doneCount: number; done?: number[] }
 export interface Request { uid: string; name: string; gender: Gender }
 export interface Live { members: Member[]; stats: Stat[]; requests: Request[]; online: boolean; me: string }
 
@@ -302,22 +310,33 @@ async function sync() {
   }
   // Envoyer ma progression (jours lus, séances cochées) quand elle change.
   if (g) {
-    const payload = JSON.stringify([g.done, g.sessions]);
+    const prog = progressOf(getState());
+    const payload = prog ? JSON.stringify([prog.done, prog.sessions]) : lastPushed;
     if (payload !== lastPushed) {
       window.clearTimeout(pushTimer);
       pushTimer = window.setTimeout(async () => {
         const cur = getState().group;
         if (!cur) return;
+        const p = progressOf(getState());
+        if (!p) return;
         try {
           const batch = fs.writeBatch(db);
-          batch.update(fs.doc(db, 'groups', cur.id, 'members', uid), { done: cur.done, sessions: cur.sessions });
-          batch.update(fs.doc(db, 'groups', cur.id, 'stats', uid), { doneCount: cur.done.length });
+          batch.update(fs.doc(db, 'groups', cur.id, 'members', uid), { done: p.done, sessions: p.sessions });
+          batch.update(fs.doc(db, 'groups', cur.id, 'stats', uid), { doneCount: p.done.length, done: p.done });
           await batch.commit();
-          lastPushed = JSON.stringify([cur.done, cur.sessions]);
+          lastPushed = JSON.stringify([p.done, p.sessions]);
         } catch { /* hors connexion : Firestore renverra plus tard */ }
       }, 800);
     }
   }
+}
+
+/** Ce qu'on partage avec le groupe : le khatm du Ramadan pour un groupe du Ramadan, le khatm du groupe sinon. */
+function progressOf(s: ReturnType<typeof getState>): { done: number[]; sessions: Record<string, number[]> } | null {
+  const g = s.group!;
+  // Groupe du Ramadan : rien à envoyer avant d'avoir commencé, ni après l'Aïd (le khatm est alors rangé dans l'historique).
+  if (g.purpose === 'ramadan') return s.ramadan ? { done: s.ramadan.done, sessions: s.ramadan.sessions } : null;
+  return { done: g.done, sessions: g.sessions };
 }
 
 function stopWatching() {

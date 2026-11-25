@@ -547,3 +547,41 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .notice-card { border-color: var(--saffron); background: var(--saffron-soft) }
 .notice-card.removed, .notice-card.refused { border-color: var(--late); background: var(--late-soft) }
 .today.group .track-name { font-size: 12px; font-weight: 700; letter-spacing: .04em; opacity: .85 }
+
+/* ---- Groupes du Ramadan : nuit et or ---- */
+.night-card { background: radial-gradient(120% 90% at 50% 0%, #17403A, #071513); color: #F7F0E1; border: 0; position: relative; overflow: hidden }
+.night-card h3 { color: #F7F0E1 }
+.night-card .note { color: rgba(247, 240, 225, .7) }
+.night-card .nc-moon { justify-self: center }
+.night-card .nc-ghost, .gw-ghost { border: 1px solid rgba(233, 180, 95, .45); background: transparent; color: #F7F0E1; border-radius: 16px; padding: 12px 18px; font: 700 15px var(--body); width: 100% }
+.night-card .nc-pill { background: rgba(233, 180, 95, .18); color: #E9B45F }
+.nc-count { display: grid; justify-items: center; text-align: center; gap: 6px; padding: 6px 0 }
+.nc-count b { font: 800 30px var(--display); color: #E9B45F }
+.nc-count p { margin: 0; color: rgba(247, 240, 225, .85); font-size: 14px }
+.nc-night { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255, 255, 255, .06); border-radius: 14px; padding: 10px 12px }
+.nc-night > span { display: grid }
+.nc-night b { font: 800 24px var(--display); color: #E9B45F }
+.nc-night small { color: rgba(247, 240, 225, .8); font-size: 13px }
+.mem { grid-template-columns: 34px minmax(0, 1fr) auto auto }
+.mem-moon { background: #0E2622; border-radius: 50%; width: 32px; height: 32px; display: grid; place-items: center }
+.group-end { justify-items: center; text-align: center; gap: 12px; padding: 20px 16px }
+.group-end .ge-title { font: 800 34px var(--display); color: #E9B45F }
+.group-end p { margin: 0 }
+.ge-moons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center }
+.ge-img { width: 100%; border-radius: 16px }
+.rm-group { font-size: 13px; background: rgba(255, 255, 255, .08); border-radius: 12px; padding: 7px 10px; color: rgba(247, 240, 225, .9) }
+/* Ouverture festive d'un groupe */
+.gw { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: radial-gradient(120% 80% at 50% 20%, var(--night-2), var(--night)); color: var(--cream); padding: 24px max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)) }
+.gw-in { position: relative; display: grid; gap: 14px; justify-items: center; text-align: center; max-width: 420px; width: 100%; animation: gwIn .7s ease-out both }
+.gw-moon { filter: drop-shadow(0 0 28px rgba(246, 221, 176, .45)); animation: gwFloat 5s ease-in-out infinite }
+.gw-kicker { margin: 0; color: var(--gold); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 12px }
+.gw .rw-greet { margin: 0 }
+.gw-text { margin: 0; color: rgba(247, 240, 225, .85) }
+.gw-code { display: grid; gap: 2px; background: rgba(255, 255, 255, .06); border: 1px solid var(--rw-line); border-radius: 16px; padding: 10px 24px }
+.gw-code small { color: rgba(247, 240, 225, .7); font-size: 12px }
+.gw-code b { font: 800 30px var(--display); letter-spacing: .16em; color: var(--gold) }
+@keyframes gwIn { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: none } }
+@keyframes gwFloat { 50% { transform: translateY(-8px) } }
+@media (prefers-reduced-motion: reduce) { .gw-in, .gw-moon { animation: none } }
+.night-card { --night: #071513; --night-2: #0E2622; --gold: #E9B45F; --gold-soft: #F6DDB0; --cream: #F7F0E1; --rw-line: rgba(233, 180, 95, .28) }
+.gw .rw-greet { text-transform: none; letter-spacing: 0; font-size: 30px; color: var(--cream) }

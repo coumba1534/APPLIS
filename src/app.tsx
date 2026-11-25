@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useStore, currentDay, update, syncRamadanStart, closeRamadanIfOver, ramadanActive } from './store';
+import { useStore, currentDay, update, syncRamadanStart, closeRamadanIfOver, ramadanActive, currentRamadanId, canJoinRamadan, joinRamadan } from './store';
 import { loadConfig, useConfig } from './config';
 import { absOf, juzOf, pageOf } from './data/quran';
 import { portion } from './data/khatam';
@@ -53,6 +53,24 @@ export function App() {
 
   useEffect(() => { const id = startReminders(); return () => clearInterval(id); }, []);
   useEffect(() => { setNoticeHandler(setNotice); startGroupSync(); }, []);
+  // Lien d'invitation ouvert alors que l'appli l'est déjà : on va sur l'onglet Groupe avec ce code.
+  const [inviteKey, setInviteKey] = useState(0);
+  useEffect(() => {
+    const onHash = () => {
+      const m = location.hash.match(/^#([A-Za-z0-9]{6})$/);
+      if (!m) return;
+      history.replaceState(null, '', location.pathname + location.search);
+      setPendingCode(m[1].toUpperCase());
+      setInviteKey((k) => k + 1);
+      setTab('group');
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  // Dans un groupe du Ramadan, on fait le khatm du Ramadan : il démarre tout seul au 1er jour (puis l'accueil du Ramadan s'ouvre).
+  useEffect(() => {
+    if (s.group?.purpose === 'ramadan' && s.group.season === currentRamadanId() && canJoinRamadan(s)) joinRamadan();
+  });
   // Réglages à distance : à l'ouverture et chaque fois qu'on revient dans l'appli.
   useEffect(() => {
     loadConfig();
@@ -129,7 +147,7 @@ export function App() {
         {tab === 'today' && <Today openReader={openReader} onNewKhatam={() => setNewOpen(true)} />}
         {tab === 'read' && <Reader target={target} setTarget={setTarget} onTitle={setReaderTitle} start={start} />}
         {tab === 'plan' && <Programme onNewKhatam={() => setNewOpen(true)} />}
-        {tab === 'group' && <Group />}
+        {tab === 'group' && <Group key={inviteKey} />}
         {tab === 'bell' && <Reminders />}
       </main>
       <nav class="tabs" aria-label="Navigation">

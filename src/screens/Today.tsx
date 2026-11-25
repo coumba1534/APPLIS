@@ -10,6 +10,16 @@ import { InstallCard } from './InstallCard';
 import { RamadanBanner } from './RamadanBanner';
 import { Moon } from './RamadanArt';
 import { GenderCard } from './Profile';
+import { useLive } from '../group';
+
+/** Sur la carte du Ramadan : où en est le groupe ce soir. */
+function RamadanGroupLine({ day }: { day: number }) {
+  const s = useStore();
+  const live = useLive();
+  const n = live.stats.length;
+  const read = live.stats.filter((x) => (x.done ?? []).includes(day)).length;
+  return <div class="rm-group">{s.group!.name}{n > 0 ? ` · ${read} sur ${n} ${read > 1 ? 'ont' : 'a'} lu ce soir` : ''}</div>;
+}
 
 export function streak(s: State, id: TrackId | null = activeTrackId(s)) {
   const t = id ? getTrack(s, id) : null;
@@ -84,7 +94,7 @@ export function Today(props: Props) {
       ) : (
         <TrackCard id="personal" {...props} />
       )}
-      {s.group && (groupPaused(s) ? (
+      {s.group && s.group.purpose !== 'ramadan' && (groupPaused(s) ? (
         <div class="card">
           <h3>{s.group.name} · en pause</h3>
           <p>Le khatm du groupe est en pause pendant le Ramadan, pour tout le groupe. Il reprendra le {formatDate(addDays(ramadanEnd(), 1))}.</p>
@@ -236,6 +246,7 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
               <span class="rm-moon" title={`${tDone.length} jours lus sur 29`}><Moon k={tDone.length / 29} size={54} /></span>
             </div>
           )}
+          {isRamadan && s.group?.purpose === 'ramadan' && <RamadanGroupLine day={cur} />}
           <div class="row"><span class="small">Jour {cur} sur {N}</span><span class="small">{pagesRange(a, b)}</span></div>
           <div class="row"><span class="juz">{juzTitle(a, b) ?? `Jour ${cur}`}</span><span class="ar">{arabicName(a, b)}</span></div>
           {showRange && <span class="small">{juzSpan(a, b)} · de {refShort(a)} à {refShort(b)} · {pagesLabel(total)}</span>}
