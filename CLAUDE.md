@@ -30,6 +30,8 @@ Maquette : https://claude.ai/artifact/N2red9a8keoGj6YJorP27n. Après « Rejoindr
 
 - **Un seul groupe à la fois.** Une fois dans un groupe, rien à l'écran ne permet d'en rejoindre un autre, jusqu'à la fin du khatam du groupe. On peut **quitter** un groupe (bouton discret, confirmation).
 - Tout le monde peut **créer** un groupe (option A) ; l'administrateur du groupe choisit **seul** la durée et le programme. Le but à terme : ouvrir l'appli au plus grand nombre.
+- **Type de groupe (décidé le 25/11/2026)** : d'abord le type A, « chacun lit tout le Coran, ensemble » (même calendrier choisi par l'admin, progression de chacun visible). Le khatm partagé (B : les 30 juz répartis entre les membres) viendra dans une mise à jour, dans les mois à venir.
+- **Connexion** : prénom seul (connexion anonyme Firebase), avec un code personnel pour retrouver son groupe en changeant de téléphone. **Visibilité** : tous les membres voient la progression de tous. **Rejoindre** : lien ou code de 6 caractères partagé (WhatsApp). L'admin peut retirer un membre.
 - Khatam de groupe en parallèle du khatam personnel ; en pause pendant le Ramadan si on suit le khatam du Ramadan.
 - Firebase (offre gratuite Spark) : elle doit créer le projet (Web app, Authentication « Anonyme », Firestore en région européenne) et transmettre `firebaseConfig`. Les hôtes Firebase sont joignables depuis l'environnement de travail.
 - Rappels appli fermée : plus tard (serveur d'envoi : GitHub Actions gratuit ou Firebase Blaze).
@@ -37,7 +39,5 @@ Maquette : https://claude.ai/artifact/N2red9a8keoGj6YJorP27n. Après « Rejoindr
 ## Questions encore ouvertes
 
 1. **Logo** : nom « Khatm » en place depuis le 25/11/2026 (textes « khatm », `src/brand.ts`, manifeste, `index.html`, noms enregistrés renommés au chargement ; les identifiants du code et la clé de stockage gardent « khatam »). Écran d'ouverture clair « ختم القرآن · Khatm al-Qur'an » dans `index.html` (1,2 s mini, 2 s maxi). Logo à choisir : mélange du mushaf ouvert D1 et du ختم ruqaa C1, sans la rahla, fond beige ou vert (maquette https://claude.ai/artifact/SVD9WBig6GSxkmhLxHLuJJ). L'écran d'ouverture utilise l'icône actuelle en attendant. Sur iPhone, il faudra sans doute réinstaller l'appli pour voir le nouveau nom et la nouvelle icône (vérifier avant que la progression ne se perd pas).
-2. **Connexion pour les groupes** : prénom seul (recommandé pour le test) ou Google.
-3. **Visibilité dans un groupe** : tous les membres voient la progression de tous (proposé) ou seulement l'administrateur.
-4. **Programme des mosquées** pour le Ramadan : si elle le trouve, l'ajouter dans `config.json` (29 versets de début de jour).
-5. **Liste des exceptions de Rabb** (6:76-78, 12:23, 12:41, 12:42, 12:50, 79:24) : à faire vérifier par elle.
+2. **Programme des mosquées** pour le Ramadan : si elle le trouve, l'ajouter dans `config.json` (29 versets de début de jour).
+3. **Liste des exceptions de Rabb** (6:76-78, 12:23, 12:41, 12:42, 12:50, 79:24) : à faire vérifier par elle.
