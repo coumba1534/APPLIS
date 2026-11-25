@@ -1,0 +1,98 @@
+rules_version = '2';
+// Règles de sécurité de Khatm (à coller dans la console Firebase : Firestore > Règles).
+// Elles font respecter côté serveur : pas de mixité, l'administrateur accepte les demandes,
+// chaque section d'un groupe encadré ne voit que ses membres, 15 ou 40 membres au plus.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function groupPath(gid) { return /databases/$(database)/documents/groups/$(gid); }
+    function grp(gid) { return get(groupPath(gid)).data; }
+    function grpAfter(gid) { return getAfter(groupPath(gid)).data; }
+    function isAdmin(gid) { return signedIn() && grp(gid).adminUid == me(); }
+    function myMemberPath(gid) { return /databases/$(database)/documents/groups/$(gid)/members/$(me()); }
+    function isMember(gid) { return signedIn() && exists(myMemberPath(gid)); }
+    function mySection(gid) { return get(myMemberPath(gid)).data.section; }
+    function requestOf(gid, uid) { return get(/databases/$(database)/documents/groups/$(gid)/requests/$(uid)).data; }
+    function hasRequest(gid, uid) { return exists(/databases/$(database)/documents/groups/$(gid)/requests/$(uid)); }
+    function maxFor(kind) { return kind == 'guided' ? 40 : 15; }
+    function onlyChanged(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+    function validName(n) { return n is string && n.size() >= 1 && n.size() <= 60; }
+
+    // Code d'invitation → groupe. Lisible avec le code exact seulement (pas de liste).
+    match /codes/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn() && request.resource.data.keys().hasOnly(['groupId'])
+        && grpAfter(request.resource.data.groupId).adminUid == me()
+        && grpAfter(request.resource.data.groupId).code == code;
+      allow delete: if signedIn() && grp(resource.data.groupId).adminUid == me();
+    }
+
+    match /groups/{gid} {
+      // Aperçu du groupe avant d'y entrer (nom, type, administrateur, calendrier, nombre de membres).
+      allow get: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.adminUid == me()
+        && request.resource.data.memberCount == 1
+        && validName(request.resource.data.name)
+        && request.resource.data.days is int && request.resource.data.days >= 1 && request.resource.data.days <= 365
+        && ((request.resource.data.kind == 'classic' && request.resource.data.gender in ['f', 'm'])
+          || (request.resource.data.kind == 'guided' && request.resource.data.gender == null));
+      // L'administrateur : nom du groupe, nombre de membres, passation. La durée, le type et le genre ne changent jamais.
+      allow update: if (isAdmin(gid)
+          && onlyChanged(['memberCount', 'adminUid', 'adminName', 'name'])
+          && request.resource.data.memberCount <= maxFor(resource.data.kind)
+          && validName(request.resource.data.name))
+        // Un membre qui s'en va : le nombre de membres baisse de 1.
+        || (isMember(gid) && onlyChanged(['memberCount'])
+          && request.resource.data.memberCount == resource.data.memberCount - 1);
+      allow delete: if isAdmin(gid) && resource.data.memberCount <= 1;
+
+      match /members/{uid} {
+        // Groupe classique : tout le groupe. Groupe encadré : sa section ; l'encadrant voit tout.
+        allow read: if isMember(gid)
+          && (grp(gid).kind == 'classic' || grp(gid).adminUid == me() || resource.data.section == mySection(gid));
+        allow create: if signedIn() && (
+          // L'administrateur crée sa fiche avec le groupe.
+          (uid == me() && grpAfter(gid).adminUid == me() && request.resource.data.role == 'admin'
+            && request.resource.data.section == request.resource.data.gender)
+          // L'administrateur accepte une demande : même genre que la demande, et pas de mixité en groupe classique.
+          || (isAdmin(gid) && hasRequest(gid, uid) && request.resource.data.role == 'member'
+            && request.resource.data.gender == requestOf(gid, uid).gender
+            && request.resource.data.section == requestOf(gid, uid).gender
+            && (grp(gid).kind == 'guided' || grp(gid).gender == request.resource.data.gender)));
+        // Chacun ne modifie que sa progression ; l'administrateur peut seulement passer le rôle d'administrateur.
+        allow update: if (uid == me() && onlyChanged(['done', 'sessions']))
+          || (isAdmin(gid) && onlyChanged(['role']) && request.resource.data.role == 'admin');
+        allow delete: if signedIn() && (uid == me() || isAdmin(gid));
+      }
+
+      // Chiffres sans prénom, pour la progression de tout le groupe.
+      match /stats/{uid} {
+        allow read: if isMember(gid);
+        allow create: if signedIn() && (
+          (uid == me() && grpAfter(gid).adminUid == me())
+          || (isAdmin(gid) && hasRequest(gid, uid)));
+        allow update: if uid == me() && onlyChanged(['doneCount']);
+        allow delete: if signedIn() && (uid == me() || isAdmin(gid));
+      }
+
+      // Demandes pour rejoindre : pas de mixité en groupe classique, et une limite de membres.
+      match /requests/{uid} {
+        allow create: if signedIn() && uid == me() && !isMember(gid)
+          && request.resource.data.gender in ['f', 'm']
+          && request.resource.data.name is string && request.resource.data.name.size() <= 30
+          && (grp(gid).kind == 'guided' || grp(gid).gender == request.resource.data.gender)
+          && grp(gid).memberCount < maxFor(grp(gid).kind);
+        allow read: if signedIn() && (uid == me() || isAdmin(gid));
+        allow delete: if signedIn() && (uid == me() || isAdmin(gid));
+      }
+    }
+
+    // Messages pour un membre (demande acceptée ou refusée, retrait), écrits par l'administrateur du groupe.
+    match /notices/{uid}/items/{id} {
+      allow read, delete: if signedIn() && uid == me();
+      allow create: if signedIn() && request.resource.data.groupId is string && isAdmin(request.resource.data.groupId);
+    }
+  }
+}

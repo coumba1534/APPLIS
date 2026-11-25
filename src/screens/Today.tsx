@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { groupPaused } from '../store';
 import { useStore, update, currentDay, toggleSession, setDayDone, readCatchUp, setCatchPlan, startTrial, todayISO, formatDate, endDate, getTrack, isPaused, pauseEnd, ramadanActive, activeTrackId, addDays, State, TrackId } from '../store';
 import { ramadanEnd, useConfig } from '../config';
 import { programmeOf, sessionsFor } from '../data/programmes';
@@ -83,6 +84,12 @@ export function Today(props: Props) {
       ) : (
         <TrackCard id="personal" {...props} />
       )}
+      {s.group && (groupPaused(s) ? (
+        <div class="card">
+          <h3>{s.group.name} · en pause</h3>
+          <p>Le khatm du groupe est en pause pendant le Ramadan, pour tout le groupe. Il reprendra le {formatDate(addDays(ramadanEnd(), 1))}.</p>
+        </div>
+      ) : <TrackCard id="group" {...props} />)}
       <InstallCard />
     </>
   );
@@ -94,6 +101,7 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
   const k = t?.khatam ?? null;
   const [showAllMissed, setShowAllMissed] = useState(false);
   const isRamadan = id === 'ramadan';
+  const isGroup = id === 'group';
 
   // ---- Pas de khatam en cours ----
   if (!k) {
@@ -123,17 +131,18 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
     return (
       <>
         <div class="today">
-          <span class="small">{k.name}</span>
+          <span class="small">{isGroup ? `Groupe · ${k.name}` : k.name}</span>
           <span class="juz">J − {1 - day}</span>
           <p style="margin:0">
             {k.kind === 'ramadan'
               ? <>Le khatm commence le {formatDate(k.start)}, in shaa Allah. La date sera ajustée selon l'annonce de la lune.</>
+              : isGroup ? <>Le khatm du groupe commence le {formatDate(k.start)} et se termine le {formatDate(endDate(k))}, in shaa Allah.</>
               : <>Votre khatm commence le {formatDate(k.start)} et se termine le {formatDate(endDate(k))}.</>}
           </p>
           <p class="small" style="margin:0">{N} jours · {dayLabel(N)}</p>
-          <button class="btn" onClick={() => { startTrial(); toast("C'est parti : jour 1 aujourd'hui"); }}>Commencer dès aujourd'hui</button>
+          {!isGroup && <button class="btn" onClick={() => { startTrial(); toast("C'est parti : jour 1 aujourd'hui"); }}>Commencer dès aujourd'hui</button>}
         </div>
-        <p class="note">Vous pourrez revenir à la date prévue dans l'onglet Programme.</p>
+        {!isGroup && <p class="note">Vous pourrez revenir à la date prévue dans l'onglet Programme.</p>}
       </>
     );
   }
@@ -143,11 +152,11 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
     return (
       <>
         <div class="card">
-          <h3>{isRamadan ? 'Khatm du Ramadan terminé, machallah ✓' : 'Khatm terminé, machallah ✓'}</h3>
+          <h3>{isRamadan ? 'Khatm du Ramadan terminé, machallah ✓' : isGroup ? 'Khatm du groupe terminé, machallah ✓' : 'Khatm terminé, machallah ✓'}</h3>
           <p>{k.name} · {N} jours{k.finishedOn ? `, terminé le ${formatDate(k.finishedOn)}` : ''}. Qu'Allah l'accepte de vous.</p>
-          {!isRamadan && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatm</button>}
+          {!isRamadan && !isGroup && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatm</button>}
         </div>
-        {!isRamadan && <button class="link" onClick={() => openReader()}>Relire le Coran</button>}
+        {!isRamadan && !isGroup && <button class="link" onClick={() => openReader()}>Relire le Coran</button>}
       </>
     );
   }
@@ -211,15 +220,16 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
     <>
       {over ? (
         <div class="card">
-          <h3>{isRamadan ? `${k.name} · dernier jour pour rattraper` : 'La période est terminée'}</h3>
+          <h3>{isRamadan ? `${k.name} · dernier jour pour rattraper` : isGroup ? `${k.name} · la période est terminée` : 'La période est terminée'}</h3>
           <p>{tDone.length} jour{tDone.length > 1 ? 's' : ''} lu{tDone.length > 1 ? 's' : ''} sur {N}. {isRamadan
             ? `Vous pouvez rattraper les jours manquants jusqu'au ${formatDate(ramadanEnd())}, dernier jour du Ramadan.`
-            : 'Vous pouvez encore rattraper les jours manquants, ou commencer un nouveau khatm.'}</p>
+            : isGroup ? 'Vous pouvez encore rattraper les jours manquants.' : 'Vous pouvez encore rattraper les jours manquants, ou commencer un nouveau khatm.'}</p>
           {catchRow && <ul class="sessions plain">{catchRow}</ul>}
-          {!isRamadan && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatm</button>}
+          {!isRamadan && !isGroup && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatm</button>}
         </div>
       ) : (
-        <div class={`today ${isRamadan ? 'ramadan' : ''}`}>
+        <div class={`today ${isRamadan ? 'ramadan' : ''} ${isGroup ? 'group' : ''}`}>
+          {isGroup && <span class="track-name">Groupe · {k.name}</span>}
           {isRamadan && (
             <div class="rm-head">
               <span class="track-name">{k.name} · {tDone.length}/29 nuits lues</span>

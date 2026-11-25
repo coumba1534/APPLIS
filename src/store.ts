@@ -14,7 +14,7 @@ import { ramadanStart, ramadanName, ramadanEnd, ramadanTest, setRamadanTest, day
 export interface CatchPlan { day: number; parts: number; partsDone: number; lastDay: string | null }
 export interface ReaderPrefs { script: string; size: number; spacing: number | null; paper: boolean; french: boolean; layout?: 'scroll' | 'page' }
 
-export type KhatamKind = 'ramadan' | 'custom';
+export type KhatamKind = 'ramadan' | 'custom' | 'group';
 
 /** Un khatam : une date de début, une durée en jours, et le Coran découpé en autant de portions. */
 export interface Khatam {
@@ -57,8 +57,35 @@ export interface RamadanState {
   extras?: { evening: boolean; last10: boolean };
 }
 
-/** Les deux suivis possibles : le khatam personnel et celui du Ramadan. */
-export type TrackId = 'personal' | 'ramadan';
+/** Les suivis possibles : le khatam personnel, celui du Ramadan et celui du groupe. */
+export type TrackId = 'personal' | 'ramadan' | 'group';
+
+/**
+ * Le groupe dont on est membre (copie locale ; la référence est dans Firestore, voir src/group.ts).
+ * Le khatm du groupe suit le calendrier choisi par l'administrateur, en pause pendant le Ramadan pour tout le monde.
+ */
+export interface GroupState {
+  id: string;
+  code: string;
+  name: string;
+  /** Groupe classique (sœurs ou frères) ou encadré (une section Sœurs et une section Frères). */
+  kind: 'classic' | 'guided';
+  /** Groupe classique : réservé aux femmes ('f') ou aux hommes ('m'). */
+  gender: Gender | null;
+  role: 'admin' | 'member';
+  /** Section du membre (son genre). */
+  section: Gender;
+  adminUid: string;
+  adminName: string;
+  programmeId: string;
+  khatam: Khatam;
+  done: number[];
+  sessions: Record<string, number[]>;
+  catchPlan: CatchPlan | null;
+  joinedOn: string;
+}
+/** Demande envoyée pour rejoindre un groupe, en attente de l'administrateur. */
+export interface GroupRequest { groupId: string; code: string; name: string; at: string }
 export interface Track { id: TrackId; khatam: Khatam; done: number[]; sessions: Record<string, number[]>; catchPlan: CatchPlan | null }
 
 export interface HistoryItem {
@@ -91,6 +118,9 @@ export interface State {
   hideRamadanBanner: string | null;
   /** Le khatam personnel en cours (un seul à la fois), ou null s'il n'y en a pas. */
   khatam: Khatam | null;
+  /** Le groupe dont on fait partie, et la demande en attente. */
+  group: GroupState | null;
+  groupRequest: GroupRequest | null;
   /** Le khatam du Ramadan, si on l'a rejoint. */
   ramadan: RamadanState | null;
   /** Message à afficher après la fin du Ramadan (khatam terminé ou non). */
@@ -137,6 +167,8 @@ const initial: State = {
   onboarded: false,
   name: '',
   gender: null,
+  group: null,
+  groupRequest: null,
   groupCode: '',
   programmeId: 'p1',
   customProgramme: [],
@@ -204,6 +236,9 @@ const listeners = new Set<() => void>();
 
 export const getState = () => state;
 
+/** Être prévenu à chaque changement (synchronisation des groupes). */
+export function subscribe(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; }
+
 export function update(patch: Partial<State> | ((s: State) => Partial<State>)) {
   const p = typeof patch === 'function' ? patch(state) : patch;
   state = { ...state, ...p };
@@ -257,9 +292,23 @@ export function pauseEnd(s: State = state) {
   return pausesOf(s).find((p) => p.from <= t && t <= p.to)?.to ?? null;
 }
 
-/** Dernier jour d'un khatam (le khatam personnel est prolongé de ses jours de pause). */
-export const endDate = (k: Khatam, s: State = state) =>
-  addDays(k.start, k.days - 1 + (s.khatam && k.id === s.khatam.id ? pausedDays(s, k.start, '9999-12-31') : 0));
+/** Jours du Ramadan (annoncé) compris entre a et b : le khatm de groupe est en pause pendant le mois. */
+const ramadanDaysBetween = (a: string, b: string) => overlap(ramadanStart(), ramadanEnd(), a, b);
+/** Vrai si le khatm du groupe est en pause aujourd'hui (Ramadan). */
+export function groupPaused(s: State = state) {
+  const t = todayISO();
+  return !!s.group && t >= s.group.khatam.start && t >= ramadanStart() && t <= ramadanEnd();
+}
+
+/** Dernier jour d'un khatam (le khatam personnel et celui du groupe sont prolongés de leurs jours de pause). */
+export const endDate = (k: Khatam, s: State = state) => {
+  if (k.kind === 'group') {
+    // Fin sans pause, puis prolongée des jours du Ramadan qui tombent dedans (une seule fois suffit : un Ramadan par an).
+    const plain = addDays(k.start, k.days - 1);
+    return addDays(plain, ramadanDaysBetween(k.start, addDays(plain, 30)));
+  }
+  return addDays(k.start, k.days - 1 + (s.khatam && k.id === s.khatam.id ? pausedDays(s, k.start, '9999-12-31') : 0));
+};
 
 /**
  * Jour du khatam : 1 à `days`, 0 ou moins avant le début, plus de `days` après la fin (0 sans khatam).
@@ -268,6 +317,11 @@ export const endDate = (k: Khatam, s: State = state) =>
 export function currentDay(s: State = state, id: TrackId = 'personal') {
   const t = todayISO();
   if (id === 'ramadan') return s.ramadan ? daysBetween(s.ramadan.khatam.start, t) + 1 : 0;
+  if (id === 'group') {
+    if (!s.group) return 0;
+    const raw = daysBetween(s.group.khatam.start, t) + 1;
+    return raw < 1 ? raw : raw - ramadanDaysBetween(s.group.khatam.start, t);
+  }
   if (!s.khatam) return 0;
   const raw = daysBetween(s.khatam.start, t) + 1;
   return raw < 1 ? raw : raw - pausedDays(s, s.khatam.start, t);
@@ -276,11 +330,13 @@ export function currentDay(s: State = state, id: TrackId = 'personal') {
 /** Le suivi demandé (khatam personnel ou du Ramadan), ou null s'il n'existe pas. */
 export function getTrack(s: State, id: TrackId): Track | null {
   if (id === 'personal') return s.khatam ? { id, khatam: s.khatam, done: s.done, sessions: s.sessions, catchPlan: s.catchPlan } : null;
+  if (id === 'group') return s.group ? { id, khatam: s.group.khatam, done: s.group.done, sessions: s.group.sessions, catchPlan: s.group.catchPlan } : null;
   return s.ramadan ? { id, khatam: s.ramadan.khatam, done: s.ramadan.done, sessions: s.ramadan.sessions, catchPlan: s.ramadan.catchPlan } : null;
 }
 type TrackPatch = Partial<Pick<Track, 'khatam' | 'done' | 'sessions' | 'catchPlan'>>;
 function patchTrack(s: State, id: TrackId, p: TrackPatch): Partial<State> {
   if (id === 'ramadan') return s.ramadan ? { ramadan: { ...s.ramadan, ...p } } : {};
+  if (id === 'group') return s.group ? { group: { ...s.group, ...p } } : {};
   return { ...p } as Partial<State>;
 }
 

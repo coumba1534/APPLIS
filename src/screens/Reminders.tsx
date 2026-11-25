@@ -61,7 +61,7 @@ export function Reminders() {
         </div>
       </div>
       <h2>Mon profil</h2>
-      <ProfileCard />
+      <ProfileCard inGroup={!!s.group || !!s.groupRequest} />
       {config.testMode && <TestTools />}
     </>
   );

@@ -7,7 +7,18 @@ import { Toast, icons } from './ui';
 import { Today, streak } from './screens/Today';
 import { Reader, ReaderTarget } from './screens/Reader';
 import { Programme } from './screens/Programme';
-import { Group } from './screens/Group';
+import { Group, setPendingCode } from './screens/Group';
+import { startGroupSync, setNoticeHandler } from './group';
+import type { Notice } from './group';
+
+// Lien d'invitation …/APPLIS/#K7M4QX : on ouvre l'onglet Groupe sur ce code.
+const inviteCode = (() => {
+  const m = location.hash.match(/^#([A-Za-z0-9]{6})$/);
+  if (!m) return '';
+  history.replaceState(null, '', location.pathname + location.search);
+  setPendingCode(m[1].toUpperCase());
+  return m[1];
+})();
 import { Reminders } from './screens/Reminders';
 import { Onboarding } from './screens/Onboarding';
 import { Finale } from './screens/Finale';
@@ -23,7 +34,9 @@ const TABS: [Tab, string][] = [['today', "Aujourd'hui"], ['read', 'Lire'], ['pla
 export function App() {
   const s = useStore();
   // À la réouverture, on revient sur le dernier onglet et la dernière lecture.
-  const [tab, setTabState] = useState<Tab>(() => (s.onboarded && TABS.some(([id]) => id === s.lastTab) ? s.lastTab as Tab : 'today'));
+  const [tab, setTabState] = useState<Tab>(() => (inviteCode && s.onboarded ? 'group' : s.onboarded && TABS.some(([id]) => id === s.lastTab) ? s.lastTab as Tab : 'today'));
+  /** Message d'un groupe (demande acceptée ou refusée, retrait), affiché en haut de l'écran. */
+  const [notice, setNotice] = useState<Notice | null>(null);
   const dayStartJuz = () => (s.khatam ? juzOf(portion(s.khatam.days, Math.min(Math.max(currentDay(s), 1), s.khatam.days))[0]) : 1);
   const [target, setTargetState] = useState<ReaderTarget>(() => s.readerTarget ?? { mode: 'juz', juz: dayStartJuz() });
   const [newOpen, setNewOpen] = useState(false);
@@ -39,6 +52,7 @@ export function App() {
   const [finaleSeen, setFinaleSeen] = useState<string[]>(finishedIds);
 
   useEffect(() => { const id = startReminders(); return () => clearInterval(id); }, []);
+  useEffect(() => { setNoticeHandler(setNotice); startGroupSync(); }, []);
   // Réglages à distance : à l'ouverture et chaque fois qu'on revient dans l'appli.
   useEffect(() => {
     loadConfig();
@@ -104,6 +118,14 @@ export function App() {
         </div>
       </header>
       <main>
+        {notice && (
+          <div class={`card notice-card ${notice.type}`}>
+            <p>{notice.type === 'accepted' ? `Bienvenue dans le groupe « ${notice.groupName} », bismillah !`
+              : notice.type === 'refused' ? `Votre demande pour rejoindre « ${notice.groupName} » n'a pas été acceptée.`
+              : `Vous ne faites plus partie du groupe « ${notice.groupName} ». Votre khatm personnel continue.`}</p>
+            <button class="ghost" style="justify-self:start" onClick={() => setNotice(null)}>Fermer</button>
+          </div>
+        )}
         {tab === 'today' && <Today openReader={openReader} onNewKhatam={() => setNewOpen(true)} />}
         {tab === 'read' && <Reader target={target} setTarget={setTarget} onTitle={setReaderTitle} start={start} />}
         {tab === 'plan' && <Programme onNewKhatam={() => setNewOpen(true)} />}

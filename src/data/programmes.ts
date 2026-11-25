@@ -195,5 +195,6 @@ export function ramadanProgramme(r: RamadanState): Programme {
 
 /** Le programme d'un suivi : rythme du Ramadan pour le khatam du Ramadan, programme habituel sinon. */
 export function programmeOf(s: State, id: TrackId): Programme {
+  if (id === 'group' && s.group) return programmeById(s.group.programmeId);
   return id === 'ramadan' && s.ramadan ? ramadanProgramme(s.ramadan) : programmeById(s.programmeId);
 }
