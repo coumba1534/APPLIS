@@ -55,7 +55,7 @@ export function RamadanWelcome() {
   );
 
   return (
-    <div class="overlay rw" role="dialog" aria-label="Accueil du khatam du Ramadan"
+    <div class="overlay rw" role="dialog" aria-label="Accueil du khatm du Ramadan"
       onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => {
         const x0 = touch.current; touch.current = null;
@@ -77,7 +77,7 @@ export function RamadanWelcome() {
             <svg class="rw-crescent" viewBox="0 0 100 100" aria-hidden="true"><defs><mask id="rw-cres"><rect width="100" height="100" fill="#fff" /><circle cx="63" cy="40" r="36" fill="#000" /></mask></defs><circle cx="50" cy="50" r="40" fill="#F6DDB0" mask="url(#rw-cres)" /></svg>
             <div class="rw-ar">رمضان مبارك</div>
             <div class="rw-greet">Ramadan Moubarak{s.name ? `, ${s.name}` : ''}</div>
-            <p class="rw-lead">Votre khatam du {r.khatam.name} vous attend : le Coran en entier, en 29 nuits.</p>
+            <p class="rw-lead">Votre khatm du {r.khatam.name} vous attend : le Coran en entier, en 29 nuits.</p>
             <span class="rw-pill">{toStart > 0 ? `Début estimé : ${formatDate(r.khatam.start)}, selon la lune` : toStart === 0 ? "C'est aujourd'hui, bismillah !" : 'Le Ramadan a commencé'}</span>
           </div>
           <div class="grow" />
@@ -144,7 +144,7 @@ export function RamadanWelcome() {
             <div class="rw-row"><div>Les 10 dernières nuits<small>Un rappel spécial pour la dernière ligne droite</small></div>
               <input type="checkbox" class="rw-switch" checked={last10} aria-label="Rappel des 10 dernières nuits" onChange={() => setLast10(!last10)} /></div>
           </div>
-          <div class="rw-notif"><span class="app">Khatam · {timeOf(0)}</span><b>🌙 {day1[0]?.label} · Juz 1</b><span>Pages {day1[0]?.pageFrom} à {day1[0]?.pageTo}. Bismillah !</span></div>
+          <div class="rw-notif"><span class="app">Khatm · {timeOf(0)}</span><b>🌙 {day1[0]?.label} · Juz 1</b><span>Pages {day1[0]?.pageFrom} à {day1[0]?.pageTo}. Bismillah !</span></div>
           <div class="grow" />
           {foot()}
         </section>
@@ -152,10 +152,10 @@ export function RamadanWelcome() {
         {/* 5. L'intention */}
         <section class="rw-slide" aria-hidden={step !== 4}>
           <span class="rw-eyebrow">Votre intention · facultatif</span>
-          <h2>Pour quoi faites-vous ce khatam ?</h2>
+          <h2>Pour quoi faites-vous ce khatm ?</h2>
           <p class="rw-lead">Une phrase à garder en tête. Elle s'affichera discrètement chaque jour sur votre carte du Ramadan.</p>
-          <textarea maxLength={120} placeholder="Je fais ce khatam pour…" value={niyya} onInput={(e) => setNiyya((e.target as HTMLTextAreaElement).value)} />
-          <div class="rw-chips">{SUGGESTIONS.map((x) => <button class="rw-chip" onClick={() => setNiyya(`Je fais ce khatam pour ${x}`)}>{x}</button>)}</div>
+          <textarea maxLength={120} placeholder="Je fais ce khatm pour…" value={niyya} onInput={(e) => setNiyya((e.target as HTMLTextAreaElement).value)} />
+          <div class="rw-chips">{SUGGESTIONS.map((x) => <button class="rw-chip" onClick={() => setNiyya(`Je fais ce khatm pour ${x}`)}>{x}</button>)}</div>
           <div class="grow" />
           {foot()}
         </section>
@@ -165,11 +165,11 @@ export function RamadanWelcome() {
           <span class="rw-eyebrow">Tout est prêt</span>
           <h2>Votre {r.khatam.name}</h2>
           <div class="rw-recap">
-            <div><span>Khatam</span><span>29 nuits · ≈ 21 pages par jour</span></div>
+            <div><span>Khatm</span><span>29 nuits · ≈ 21 pages par jour</span></div>
             <div><span>Rythme</span><span>{programme.name}</span></div>
             <div><span>Rappels</span><span>{programme.sessions.map((_, i) => timeOf(i)).join(' · ')}</span></div>
             <div><span>Intention</span><span>{niyya.trim() || '—'}</span></div>
-            {s.khatam && !s.khatam.finishedOn && <div><span>Khatam personnel</span><span>en pause pendant le mois</span></div>}
+            {s.khatam && !s.khatam.finishedOn && <div><span>Khatm personnel</span><span>en pause pendant le mois</span></div>}
           </div>
           <div class="grow" />
           <button class="rw-btn wide" onClick={start}>Bismillah, je commence</button>

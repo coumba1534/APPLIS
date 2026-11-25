@@ -36,7 +36,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       <label class="field">Votre prénom<input type="text" value={name} placeholder="Ex. Aminata ou Moussa" autocomplete="given-name" onInput={(e) => setName((e.target as HTMLInputElement).value)} /></label>
     </>,
     <>
-      <h1>Quelle durée pour votre khatam ?</h1>
+      <h1>Quelle durée pour votre khatm ?</h1>
       <p>Le Coran est découpé en parts égales, une par jour. Vous pourrez aussi choisir une durée personnalisée dans l'onglet Programme.</p>
       {([['ramadan', 'Ramadan', 30], ['30', '1 mois', 30], ['60', '2 mois', 60], ['90', '3 mois', 90]] as const).filter(([id]) => id !== 'ramadan').map(([id, title, d]) => (
         <button class="choice" aria-pressed={dur === id} onClick={() => setDur(id)}>

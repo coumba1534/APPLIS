@@ -1,7 +1,7 @@
 {
-  "name": "Khatam entre sœurs",
-  "short_name": "Khatam Sœurs",
-  "description": "Un juz par jour pendant le Ramadan, chacune à son rythme, ensemble.",
+  "name": "Khatm",
+  "short_name": "Khatm",
+  "description": "Khatm al-Qur'an : lire le Coran en entier, à son rythme.",
   "lang": "fr",
   "dir": "ltr",
   "start_url": "./",

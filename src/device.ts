@@ -48,16 +48,16 @@ const minutes = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); 
 /** Textes des notifications du Ramadan (utilisés aussi par les outils de test). */
 export const ramadanNotifications = {
   available: () => ({
-    title: 'Votre khatam du Ramadan est disponible 🌙',
-    body: `${ramadanName()} commence le ${formatDate(ramadanStart())}. Le khatam du Ramadan s'ouvrira le 1er jour : le Coran en entier en 29 jours.`,
+    title: 'Votre khatm du Ramadan est disponible 🌙',
+    body: `${ramadanName()} commence le ${formatDate(ramadanStart())}. Le khatm du Ramadan s'ouvrira le 1er jour : le Coran en entier en 29 jours.`,
   }),
   open: () => ({
-    title: 'Le khatam du Ramadan est ouvert 🌙',
+    title: 'Le khatm du Ramadan est ouvert 🌙',
     body: 'Rejoignez-le dans l\'appli : le Coran en entier en 29 jours, comme dans les mosquées.',
   }),
   firstDay: () => ({
     title: 'Ramadan Moubarak 🌙',
-    body: "Votre khatam du Ramadan commence aujourd'hui : jour 1, juz 1. Bismillah !",
+    body: "Votre khatm du Ramadan commence aujourd'hui : jour 1, juz 1. Bismillah !",
   }),
 };
 
@@ -86,7 +86,7 @@ export function startReminders() {
     if (s.ramadan && s.ramadan.khatam.start === date) once(`debut:${s.ramadan.khatam.id}`, ramadanNotifications.firstDay());
     // Veille des 10 dernières nuits (jour 20), en fin de journée.
     if (s.ramadan && s.ramadan.extras?.last10 !== false && currentDay(s, 'ramadan') === 20 && new Date().getHours() >= 17)
-      once(`dix:${s.ramadan.khatam.id}`, { title: 'Les 10 dernières nuits commencent ce soir 🌙', body: 'La dernière ligne droite de votre khatam du Ramadan. Courage, vous y êtes presque !' });
+      once(`dix:${s.ramadan.khatam.id}`, { title: 'Les 10 dernières nuits commencent ce soir 🌙', body: 'La dernière ligne droite de votre khatm du Ramadan. Courage, vous y êtes presque !' });
 
     // Rappels des séances du khatam qu'on lit en ce moment (celui du Ramadan pendant le mois).
     const id = activeTrackId(s);

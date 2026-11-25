@@ -1,6 +1,6 @@
-# Khatam entre sœurs
+# Khatm
 
-Application web installable (PWA) pour faire un **khatam du Coran pendant le Ramadan** : un juz par jour pendant 30 jours, chacune de son côté, à son rythme, et ensemble en groupe.
+Application web installable (PWA) pour faire son **khatm al-Qur'an**, lire le Coran en entier : à son rythme, pendant le Ramadan (29 jours, comme dans les mosquées) et bientôt en groupe.
 
 ## Ce que fait l'appli (version 0.1)
 

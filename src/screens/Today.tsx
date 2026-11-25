@@ -56,11 +56,11 @@ export function Today(props: Props) {
     <>
       {s.ramadanEnded && (
         <div class="card ramadan-end">
-          <h3>{s.ramadanEnded.finished ? `${s.ramadanEnded.name} : khatam terminé` : `${s.ramadanEnded.name} est terminé`}</h3>
+          <h3>{s.ramadanEnded.finished ? `${s.ramadanEnded.name} : khatm terminé` : `${s.ramadanEnded.name} est terminé`}</h3>
           <p>{s.ramadanEnded.finished
             ? "Machallah, vous avez lu le Coran en entier pendant ce Ramadan. Qu'Allah l'accepte de vous."
-            : `Vous avez lu ${s.ramadanEnded.doneDays} jour${s.ramadanEnded.doneDays > 1 ? 's' : ''} sur ${s.ramadanEnded.days}. Vous n'avez pas pu terminer ce khatam du Ramadan : qu'Allah vous permette de le compléter l'année prochaine.`}</p>
-          {s.khatam && !s.khatam.finishedOn && <p class="note">Votre khatam personnel reprend là où vous l'aviez laissé.</p>}
+            : `Vous avez lu ${s.ramadanEnded.doneDays} jour${s.ramadanEnded.doneDays > 1 ? 's' : ''} sur ${s.ramadanEnded.days}. Vous n'avez pas pu terminer ce khatm du Ramadan : qu'Allah vous permette de le compléter l'année prochaine.`}</p>
+          {s.khatam && !s.khatam.finishedOn && <p class="note">Votre khatm personnel reprend là où vous l'aviez laissé.</p>}
           <button class="ghost" style="justify-self:start" onClick={() => update({ ramadanEnded: null })}>Fermer</button>
         </div>
       )}
@@ -68,15 +68,15 @@ export function Today(props: Props) {
       {r && rDay < 1 && (
         <div class="card ramadan-soon">
           <h3>🌙 {r.khatam.name} · J − {1 - rDay}</h3>
-          <p>Vous avez rejoint le khatam du Ramadan : le Coran en 29 jours, à partir du {formatDate(r.khatam.start)}, selon l'annonce de la lune.</p>
-          {s.khatam && !s.khatam.finishedOn && <p class="note">Votre khatam personnel continue jusque-là, puis il sera en pause pendant le Ramadan.</p>}
+          <p>Vous avez rejoint le khatm du Ramadan : le Coran en 29 jours, à partir du {formatDate(r.khatam.start)}, selon l'annonce de la lune.</p>
+          {s.khatam && !s.khatam.finishedOn && <p class="note">Votre khatm personnel continue jusque-là, puis il sera en pause pendant le Ramadan.</p>}
         </div>
       )}
       {r && ramadanActive(s) && <TrackCard id="ramadan" {...props} />}
       {paused ? (
         <div class="card">
           <h3>{s.khatam!.name} · en pause</h3>
-          <p>Votre khatam personnel est en pause pendant le Ramadan. Il reprendra le {formatDate(addDays(pauseEnd(s)!, 1))}, là où vous l'avez laissé.</p>
+          <p>Votre khatm personnel est en pause pendant le Ramadan. Il reprendra le {formatDate(addDays(pauseEnd(s)!, 1))}, là où vous l'avez laissé.</p>
         </div>
       ) : (
         <TrackCard id="personal" {...props} />
@@ -101,11 +101,11 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
       <>
         <div class="today">
           <span class="small">Bismillah</span>
-          <span class="juz">Prêt pour un khatam ?</span>
+          <span class="juz">Prêt pour un khatm ?</span>
           <p style="margin:0">Choisissez une durée (1, 2, 3 mois ou personnalisée) et lisez le Coran du début à la fin, à votre rythme.</p>
-          <button class="btn" onClick={() => onNewKhatam()}>Commencer un khatam</button>
+          <button class="btn" onClick={() => onNewKhatam()}>Commencer un khatm</button>
         </div>
-        {stopped && <p class="note">Vous pouvez aussi reprendre un khatam interrompu depuis l'onglet Programme, dans l'historique.</p>}
+        {stopped && <p class="note">Vous pouvez aussi reprendre un khatm interrompu depuis l'onglet Programme, dans l'historique.</p>}
         {s.bookmark && <button class="link" onClick={() => openReader()}>Reprendre la lecture au marque-page</button>}
       </>
     );
@@ -125,8 +125,8 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
           <span class="juz">J − {1 - day}</span>
           <p style="margin:0">
             {k.kind === 'ramadan'
-              ? <>Le khatam commence le {formatDate(k.start)}, in shaa Allah. La date sera ajustée selon l'annonce de la lune.</>
-              : <>Votre khatam commence le {formatDate(k.start)} et se termine le {formatDate(endDate(k))}.</>}
+              ? <>Le khatm commence le {formatDate(k.start)}, in shaa Allah. La date sera ajustée selon l'annonce de la lune.</>
+              : <>Votre khatm commence le {formatDate(k.start)} et se termine le {formatDate(endDate(k))}.</>}
           </p>
           <p class="small" style="margin:0">{N} jours · {dayLabel(N)}</p>
           <button class="btn" onClick={() => { startTrial(); toast("C'est parti : jour 1 aujourd'hui"); }}>Commencer dès aujourd'hui</button>
@@ -141,9 +141,9 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
     return (
       <>
         <div class="card">
-          <h3>{isRamadan ? 'Khatam du Ramadan terminé, machallah ✓' : 'Khatam terminé, machallah ✓'}</h3>
+          <h3>{isRamadan ? 'Khatm du Ramadan terminé, machallah ✓' : 'Khatm terminé, machallah ✓'}</h3>
           <p>{k.name} · {N} jours{k.finishedOn ? `, terminé le ${formatDate(k.finishedOn)}` : ''}. Qu'Allah l'accepte de vous.</p>
-          {!isRamadan && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatam</button>}
+          {!isRamadan && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatm</button>}
         </div>
         {!isRamadan && <button class="link" onClick={() => openReader()}>Relire le Coran</button>}
       </>
@@ -212,9 +212,9 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
           <h3>{isRamadan ? `${k.name} · dernier jour pour rattraper` : 'La période est terminée'}</h3>
           <p>{tDone.length} jour{tDone.length > 1 ? 's' : ''} lu{tDone.length > 1 ? 's' : ''} sur {N}. {isRamadan
             ? `Vous pouvez rattraper les jours manquants jusqu'au ${formatDate(ramadanEnd())}, dernier jour du Ramadan.`
-            : 'Vous pouvez encore rattraper les jours manquants, ou commencer un nouveau khatam.'}</p>
+            : 'Vous pouvez encore rattraper les jours manquants, ou commencer un nouveau khatm.'}</p>
           {catchRow && <ul class="sessions plain">{catchRow}</ul>}
-          {!isRamadan && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatam</button>}
+          {!isRamadan && <button class="btn teal" onClick={() => onNewKhatam()}>Commencer un nouveau khatm</button>}
         </div>
       ) : (
         <div class={`today ${isRamadan ? 'ramadan' : ''}`}>
@@ -292,7 +292,7 @@ function TrackCard({ id, openReader, onNewKhatam }: Props & { id: TrackId }) {
         <div class="catchup">
           <b>{missed.length} jours à rattraper</b>
           <p>{isRamadan && s.ramadan && s.ramadan.joinedOn > k.start
-            ? `Vous avez rejoint le khatam en cours de route : lisez ces jours à votre rythme, jusqu'au ${formatDate(ramadanEnd())}.`
+            ? `Vous avez rejoint le khatm en cours de route : lisez ces jours à votre rythme, jusqu'au ${formatDate(ramadanEnd())}.`
             : 'Pas d\'inquiétude : lisez-les à votre rythme, en plus de la lecture du jour.'}</p>
           <ul class="missed-list">
             {(showAllMissed ? missed : missed.slice(0, 5)).map((d) => {

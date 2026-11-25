@@ -68,11 +68,11 @@ export function App() {
   const day = currentDay(s);
   const hello = `Assalamou alaykoum${s.name ? `, ${s.name}` : ''}`;
   const titles: Record<Tab, [string, string]> = {
-    today: [hello, ramadanActive(s) ? `Jour ${Math.min(currentDay(s, 'ramadan'), 29)} · ${s.ramadan!.khatam.name}` : !s.khatam ? 'Prêt pour un nouveau khatam' : day >= 1 && day <= N ? (s.khatam.kind === 'ramadan' ? `Jour ${day} du Ramadan` : `Jour ${day} sur ${N}`) : s.khatam.name],
+    today: [hello, ramadanActive(s) ? `Jour ${Math.min(currentDay(s, 'ramadan'), 29)} · ${s.ramadan!.khatam.name}` : !s.khatam ? 'Prêt pour un nouveau khatm' : day >= 1 && day <= N ? (s.khatam.kind === 'ramadan' ? `Jour ${day} du Ramadan` : `Jour ${day} sur ${N}`) : s.khatam.name],
     read: readerTitle,
-    plan: ['Mon programme', 'Mon khatam, à mon rythme'],
+    plan: ['Mon programme', 'Mon khatm, à mon rythme'],
     group: ['Mon groupe', 'On avance ensemble'],
-    bell: ['Rappels', 'Notifications du khatam'],
+    bell: ['Rappels', 'Notifications du khatm'],
   };
 
   /** Ouvre Lire : au verset demandé (début de la portion du jour), sinon au marque-page. */

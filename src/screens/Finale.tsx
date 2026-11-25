@@ -5,10 +5,10 @@ import type { Khatam } from '../store';
 
 export function Finale({ khatam, onClose }: { khatam: Khatam; onClose: () => void }) {
   return (
-    <div class="overlay finale" role="dialog" aria-label="Khatam terminé">
+    <div class="overlay finale" role="dialog" aria-label="Khatm terminé">
       <div class="inner">
         <div class="moon">🌙</div>
-        <h1>Khatam terminé, machallah !</h1>
+        <h1>Khatm terminé, machallah !</h1>
         <p>{khatam.kind === 'ramadan' ? 'Vous avez lu le Coran en entier pendant ce Ramadan.' : `Vous avez lu le Coran en entier en ${khatam.days} jours.`} Qu'Allah l'accepte de vous.</p>
         <div class="figs"><div><b>30</b><span>juz</span></div><div><b>604</b><span>pages</span></div><div><b>{khatam.days}</b><span>jours</span></div></div>
         {duas.map((d) => (

@@ -36,9 +36,9 @@ async function drawCard(name: string, khatamName: string): Promise<Blob> {
   ctx.fillText('ما شاء الله', W / 2, 560);
   ctx.direction = 'ltr';
   ctx.fillStyle = '#F7F0E1'; ctx.font = '700 64px "Bricolage Grotesque", sans-serif';
-  ctx.fillText(name ? `${name} a terminé` : 'Khatam terminé', W / 2, 690);
+  ctx.fillText(name ? `${name} a terminé` : 'Khatm terminé', W / 2, 690);
   ctx.font = '700 52px "Bricolage Grotesque", sans-serif';
-  ctx.fillText(`son khatam du ${khatamName}`, W / 2, 770);
+  ctx.fillText(`son khatm du ${khatamName}`, W / 2, 770);
   ctx.fillStyle = 'rgba(247,240,225,.75)'; ctx.font = '30px "Atkinson Hyperlegible", sans-serif';
   ctx.fillText('29 nuits · 30 juz · 604 pages', W / 2, 850);
   ctx.fillStyle = 'rgba(247,240,225,.45)'; ctx.font = '700 24px "Atkinson Hyperlegible", sans-serif';
@@ -56,7 +56,7 @@ export function RamadanFinale({ khatam, onClose, onNewKhatam }: { khatam: Khatam
     const file = new File([blob], 'khatam-ramadan.png', { type: 'image/png' });
     const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
     if (nav.canShare?.({ files: [file] })) {
-      try { await nav.share({ files: [file], title: `Khatam du ${khatam.name}` }); return; } catch { /* partage annulé */ return; }
+      try { await nav.share({ files: [file], title: `Khatm du ${khatam.name}` }); return; } catch { /* partage annulé */ return; }
     }
     // Sans partage de fichiers : on montre l'image, à enregistrer par un appui long.
     setPreview(URL.createObjectURL(blob));
@@ -64,12 +64,12 @@ export function RamadanFinale({ khatam, onClose, onNewKhatam }: { khatam: Khatam
   };
 
   return (
-    <div class="overlay rw rf" role="dialog" aria-label="Khatam du Ramadan terminé">
+    <div class="overlay rw rf" role="dialog" aria-label="Khatm du Ramadan terminé">
       <Stars count={70} />
       <div class="rf-inner">
         {preview ? (
           <>
-            <img class="rf-card" src={preview} alt={`Carte : ${s.name || ''} a terminé son khatam du ${khatam.name}`} />
+            <img class="rf-card" src={preview} alt={`Carte : ${s.name || ''} a terminé son khatm du ${khatam.name}`} />
             <button class="rw-back" onClick={() => setPreview(null)}>Retour</button>
           </>
         ) : (
@@ -87,8 +87,8 @@ export function RamadanFinale({ khatam, onClose, onNewKhatam }: { khatam: Khatam
             {s.ramadan?.niyya && <div class="rf-niyya">{s.ramadan.niyya}</div>}
             <div class="grow" />
             {personal
-              ? <button class="rw-btn wide" onClick={onClose}>Continuer mon khatam personnel</button>
-              : <button class="rw-btn wide" onClick={() => { onClose(); onNewKhatam(); }}>Commencer un nouveau khatam</button>}
+              ? <button class="rw-btn wide" onClick={onClose}>Continuer mon khatm personnel</button>
+              : <button class="rw-btn wide" onClick={() => { onClose(); onNewKhatam(); }}>Commencer un nouveau khatm</button>}
             <button class="rf-ghost" onClick={share}>Partager ma réussite</button>
             <button class="rw-back" onClick={onClose}>Fermer</button>
           </>

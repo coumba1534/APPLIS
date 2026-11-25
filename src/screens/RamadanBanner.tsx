@@ -29,7 +29,7 @@ export function RamadanBanner({ always = false }: { always?: boolean }) {
       <div class="rb-top">
         <span class="rb-moon" aria-hidden="true">🌙</span>
         <div>
-          <b>{before ? `${ramadanName()} approche` : restart ? `Khatam du ${ramadanName()}` : 'Votre khatam du Ramadan est ouvert'}</b>
+          <b>{before ? `${ramadanName()} approche` : restart ? `Khatm du ${ramadanName()}` : 'Votre khatm du Ramadan est ouvert'}</b>
           <small>{n > 1 ? `Il commence dans ${n} jours, le ${formatDate(start)}, selon l'annonce de la lune.`
             : n === 1 ? `Il commence demain, in shaa Allah.`
             : restart ? `Vous pouvez le recommencer au jour 1 : les jours déjà passés seront à rattraper.`
@@ -37,23 +37,23 @@ export function RamadanBanner({ always = false }: { always?: boolean }) {
         </div>
       </div>
       <p>{before
-        ? "Le khatam du Ramadan s'ouvrira le 1er jour : le Coran en entier en 29 jours, comme dans les mosquées. Vous pourrez le rejoindre ici."
+        ? "Le khatm du Ramadan s'ouvrira le 1er jour : le Coran en entier en 29 jours, comme dans les mosquées. Vous pourrez le rejoindre ici."
         : 'Le Coran en entier en 29 jours, comme dans les mosquées : environ 21 pages par jour.'}</p>
       {before ? (
         !always && <div class="rb-actions"><button class="link" onClick={() => update({ hideRamadanBanner: hideKey })}>J'ai compris</button></div>
       ) : asking ? (
         <div class="confirm">
-          <p>{restart ? 'Recommencer' : 'Rejoindre'} le khatam du {ramadanName()} ?
-            {personal ? ` Votre khatam personnel « ${personal.name} » sera mis en pause pendant le Ramadan, puis reprendra le lendemain, là où vous l'aurez laissé.` : ''}
+          <p>{restart ? 'Recommencer' : 'Rejoindre'} le khatm du {ramadanName()} ?
+            {personal ? ` Votre khatm personnel « ${personal.name} » sera mis en pause pendant le Ramadan, puis reprendra le lendemain, là où vous l'aurez laissé.` : ''}
             {n < 0 ? ` Les jours déjà passés seront à rattraper, jusqu'au ${formatDate(ramadanEnd())}.` : ''}</p>
           <div class="actions-row">
-            <button class="btn" onClick={() => { joinRamadan(); setAsking(false); toast('Bienvenue dans le khatam du Ramadan, bismillah !'); }}>{restart ? 'Recommencer' : 'Rejoindre'}</button>
+            <button class="btn" onClick={() => { joinRamadan(); setAsking(false); toast('Bienvenue dans le khatm du Ramadan, bismillah !'); }}>{restart ? 'Recommencer' : 'Rejoindre'}</button>
             <button class="ghost" onClick={() => setAsking(false)}>Annuler</button>
           </div>
         </div>
       ) : (
         <div class="rb-actions">
-          <button class="btn" onClick={() => setAsking(true)}>{restart ? 'Recommencer le khatam du Ramadan' : 'Rejoindre le khatam du Ramadan'}</button>
+          <button class="btn" onClick={() => setAsking(true)}>{restart ? 'Recommencer le khatm du Ramadan' : 'Rejoindre le khatm du Ramadan'}</button>
           {!always && <button class="link" onClick={() => update({ hideRamadanBanner: hideKey })}>Plus tard</button>}
         </div>
       )}

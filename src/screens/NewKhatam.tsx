@@ -18,10 +18,10 @@ const CHOICES: { id: Choice; title: string; days: number | null }[] = [
 export type { Choice };
 export function khatamName(choice: Choice, days: number) {
   if (choice === 'ramadan') return 'Ramadan';
-  if (choice === '30') return "Khatam d'un mois";
-  if (choice === '60') return 'Khatam de 2 mois';
-  if (choice === '90') return 'Khatam de 3 mois';
-  return `Khatam de ${days} jours`;
+  if (choice === '30') return "Khatm d'un mois";
+  if (choice === '60') return 'Khatm de 2 mois';
+  if (choice === '90') return 'Khatm de 3 mois';
+  return `Khatm de ${days} jours`;
 }
 
 /** Fenêtre de création d'un khatam : durée (Ramadan, 1, 2, 3 mois ou personnalisée) et date de début. */
@@ -48,15 +48,15 @@ export function NewKhatam({ onClose, onStarted, preselect }: { onClose: () => vo
 
   const go = () => {
     startKhatam({ kind: choice === 'ramadan' ? 'ramadan' : 'custom', name: khatamName(choice, days), start, days });
-    toast('Nouveau khatam commencé, bismillah !');
+    toast('Nouveau khatm commencé, bismillah !');
     onStarted();
     onClose();
   };
 
   return (
-    <div class="overlay" role="dialog" aria-label="Nouveau khatam">
+    <div class="overlay" role="dialog" aria-label="Nouveau khatm">
       <div class="inner">
-        <div class="row"><h1>Nouveau khatam</h1><button class="close" aria-label="Fermer" onClick={onClose}>✕</button></div>
+        <div class="row"><h1>Nouveau khatm</h1><button class="close" aria-label="Fermer" onClick={onClose}>✕</button></div>
         <p>Choisissez la durée. Le Coran est découpé en parts égales, en unités traditionnelles (juz, hizb, ½ hizb).</p>
 
         <div class="choices" role="group" aria-label="Durée">
@@ -91,11 +91,11 @@ export function NewKhatam({ onClose, onStarted, preselect }: { onClose: () => vo
           <small>Jour 1 : de {refText(a)} à {refText(b)}</small>
         </div>
 
-        {inProgress && <p class="note warn">Votre khatam en cours ({s.done.length}/{s.khatam?.days} jours lus) sera gardé dans l'historique comme interrompu.</p>}
+        {inProgress && <p class="note warn">Votre khatm en cours ({s.done.length}/{s.khatam?.days} jours lus) sera gardé dans l'historique comme interrompu.</p>}
 
         <div class="actions">
           <button class="link" onClick={onClose}>Annuler</button>
-          <button class="btn teal" onClick={go}>Commencer ce khatam</button>
+          <button class="btn teal" onClick={go}>Commencer ce khatm</button>
         </div>
       </div>
     </div>

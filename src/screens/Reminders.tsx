@@ -84,8 +84,8 @@ function TestTools() {
   return (
     <div class="card test-tools">
       <h3>Outils de test</h3>
-      <p class="note">Simule un Ramadan sur ce téléphone seulement, pour voir l'annonce, le khatam du Ramadan, la pause du khatam personnel et la fin du mois. Les autres utilisateurs ne voient rien.</p>
-      <p><b>{t ? `Ramadan simulé : du ${formatDate(t)} au ${formatDate(ramadanEnd())}` : 'Aucune simulation en cours'}</b>{s.ramadan ? ' · khatam rejoint' : ''}</p>
+      <p class="note">Simule un Ramadan sur ce téléphone seulement, pour voir l'annonce, le khatm du Ramadan, la pause du khatm personnel et la fin du mois. Les autres utilisateurs ne voient rien.</p>
+      <p><b>{t ? `Ramadan simulé : du ${formatDate(t)} au ${formatDate(ramadanEnd())}` : 'Aucune simulation en cours'}</b>{s.ramadan ? ' · khatm rejoint' : ''}</p>
       <div class="test-grid">
         <button class="ghost" onClick={() => sim(10, 'Le Ramadan commence dans 10 jours (annonce)')}>Annonce · J − 10</button>
         <button class="ghost" onClick={() => sim(1, 'Le Ramadan commence demain')}>Veille du Ramadan</button>

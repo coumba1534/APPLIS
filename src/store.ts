@@ -126,7 +126,7 @@ export function ramadanKhatam(start = ramadanStart()): Khatam {
 }
 
 /** Khatam d'un mois qui commence aujourd'hui : le point de départ avant le premier choix. */
-export const monthKhatam = (): Khatam => ({ id: newId(), kind: 'custom', name: "Khatam d'un mois", start: todayISO(), days: 30 });
+export const monthKhatam = (): Khatam => ({ id: newId(), kind: 'custom', name: "Khatm d'un mois", start: todayISO(), days: 30 });
 
 const initial: State = {
   version: 2,
@@ -173,12 +173,22 @@ function migrate(old: Record<string, unknown>): State {
   return { ...initial, ...(rest as Partial<State>), version: 2, khatam, history: [], customProgramme: [], catchPlan };
 }
 
+/** Nouveau nom (« khatm ») dans les noms déjà enregistrés : « Khatam de 2 mois » devient « Khatm de 2 mois ». */
+function renameKhatm(s: State): State {
+  const fix = (n: string) => n.replace(/\bKhatam\b/g, 'Khatm').replace(/\bkhatam\b/g, 'khatm');
+  return {
+    ...s,
+    khatam: s.khatam ? { ...s.khatam, name: fix(s.khatam.name) } : s.khatam,
+    history: s.history.map((h) => ({ ...h, name: fix(h.name) })),
+  };
+}
+
 function read(): State {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const data = JSON.parse(raw);
-      return data.version === 2 && data.khatam ? { ...initial, ...data } : migrate(data);
+      return renameKhatm(data.version === 2 && data.khatam ? { ...initial, ...data } : migrate(data));
     }
   } catch { /* stockage indisponible : on repart de zéro */ }
   return initial;

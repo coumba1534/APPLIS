@@ -1,4 +1,4 @@
-# Khatam entre sœurs : suivi du projet
+# Khatm (ex « Khatam entre sœurs ») : suivi du projet
 
 Ce fichier est relu au début de chaque session de travail. Il garde les décisions prises avec la porteuse du projet (Coumba), pour que le travail continue sans rien perdre, même quand la conversation est résumée ou qu'une nouvelle session commence.
 
@@ -36,7 +36,7 @@ Maquette : https://claude.ai/artifact/N2red9a8keoGj6YJorP27n. Après « Rejoindr
 
 ## Questions encore ouvertes
 
-1. **Nom et logo** : décidé, l'appli s'appellera **« Khatm »** (forme correcte : khatm al-Qur'an), écran d'ouverture « Khatm al-Qur'an ». À faire : remplacer « khatam » par « khatm » dans tous les textes, nom dans `src/brand.ts` (+ manifeste, `index.html`, README). Logo pas encore choisi (maquette https://claude.ai/artifact/SVD9WBig6GSxkmhLxHLuJJ : elle hésite entre le mushaf ouvert D et le mot ختم C) ; écran d'ouverture foncé ou clair à choisir. Sur iPhone, il faudra sans doute réinstaller l'appli pour voir le nouveau nom et la nouvelle icône (vérifier avant que la progression ne se perd pas).
+1. **Logo** : nom « Khatm » en place depuis le 25/11/2026 (textes « khatm », `src/brand.ts`, manifeste, `index.html`, noms enregistrés renommés au chargement ; les identifiants du code et la clé de stockage gardent « khatam »). Écran d'ouverture clair « ختم القرآن · Khatm al-Qur'an » dans `index.html` (1,2 s mini, 2 s maxi). Logo à choisir : mélange du mushaf ouvert D1 et du ختم ruqaa C1, sans la rahla, fond beige ou vert (maquette https://claude.ai/artifact/SVD9WBig6GSxkmhLxHLuJJ). L'écran d'ouverture utilise l'icône actuelle en attendant. Sur iPhone, il faudra sans doute réinstaller l'appli pour voir le nouveau nom et la nouvelle icône (vérifier avant que la progression ne se perd pas).
 2. **Connexion pour les groupes** : prénom seul (recommandé pour le test) ou Google.
 3. **Visibilité dans un groupe** : tous les membres voient la progression de tous (proposé) ou seulement l'administrateur.
 4. **Programme des mosquées** pour le Ramadan : si elle le trouve, l'ajouter dans `config.json` (29 versets de début de jour).

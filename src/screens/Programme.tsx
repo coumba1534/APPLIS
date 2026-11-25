@@ -63,14 +63,14 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
 
   const ramadanQuit = rOn && (
     <div class="card">
-      {!leaving && <button class="link stop-link" onClick={() => setLeaving(true)}>Quitter le khatam du Ramadan</button>}
+      {!leaving && <button class="link stop-link" onClick={() => setLeaving(true)}>Quitter le khatm du Ramadan</button>}
       {leaving && (
         <div class="confirm">
           <p><b>Votre progression sera perdue.</b> {r!.done.length > 0
-            ? `Vous avez lu ${r!.done.length} jour${r!.done.length > 1 ? 's' : ''} sur 29, et ce khatam ne pourra pas être repris là où vous en êtes : seulement recommencé depuis le début.`
-            : 'Il ne pourra pas être repris là où vous en êtes.'}{s.khatam && !s.khatam.finishedOn ? ' Votre khatam personnel reprendra dès demain.' : ''}</p>
+            ? `Vous avez lu ${r!.done.length} jour${r!.done.length > 1 ? 's' : ''} sur 29, et ce khatm ne pourra pas être repris là où vous en êtes : seulement recommencé depuis le début.`
+            : 'Il ne pourra pas être repris là où vous en êtes.'}{s.khatam && !s.khatam.finishedOn ? ' Votre khatm personnel reprendra dès demain.' : ''}</p>
           <div class="actions-row">
-            <button class="btn danger-fill" onClick={() => { leaveRamadan(); setLeaving(false); toast('Khatam du Ramadan quitté'); }}>Quitter quand même</button>
+            <button class="btn danger-fill" onClick={() => { leaveRamadan(); setLeaving(false); toast('Khatm du Ramadan quitté'); }}>Quitter quand même</button>
             <button class="ghost" onClick={() => setLeaving(false)}>Annuler</button>
           </div>
         </div>
@@ -85,33 +85,33 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
     <>
       {!r && <RamadanBanner always />}
       {ramadanMode ? (<>
-        <h2>Khatam du Ramadan</h2>
+        <h2>Khatm du Ramadan</h2>
         {ramadanSummary}
         <h2>Calendrier du Ramadan · 29 jours</h2>
         <Calendar N={29} done={r!.done} day={rDay} />
         {active && (
           <div class="card">
             <h3>{k!.name} · en pause</h3>
-            <p class="note">Votre khatam personnel est en pause pendant le Ramadan. Il reprendra le {formatDate(addDays(pauseEnd(s) ?? ramadanEnd(), 1))}, là où vous l'avez laissé.</p>
+            <p class="note">Votre khatm personnel est en pause pendant le Ramadan. Il reprendra le {formatDate(addDays(pauseEnd(s) ?? ramadanEnd(), 1))}, là où vous l'avez laissé.</p>
           </div>
         )}
         {ramadanRhythm}
         {ramadanQuit}
       </>) : (<>
         {r && (<>
-          <h2>Khatam du Ramadan</h2>
+          <h2>Khatm du Ramadan</h2>
           {ramadanSummary}
           {ramadanRhythm}
           {ramadanQuit}
         </>)}
 
-        <h2>Mon khatam</h2>
+        <h2>Mon khatm</h2>
         {!k ? (
           <div class="card">
-            <h3>Aucun khatam en cours</h3>
+            <h3>Aucun khatm en cours</h3>
             <p>Choisissez une durée et commencez à lire le Coran du début à la fin.</p>
-            <button class="btn teal" onClick={onNewKhatam}>Commencer un khatam</button>
-            {s.history.some((x) => x.status === 'stopped') && <p class="note">Vous pouvez aussi reprendre un khatam interrompu, dans l'historique plus bas.</p>}
+            <button class="btn teal" onClick={onNewKhatam}>Commencer un khatm</button>
+            {s.history.some((x) => x.status === 'stopped') && <p class="note">Vous pouvez aussi reprendre un khatm interrompu, dans l'historique plus bas.</p>}
           </div>
         ) : (<>
           <div class="card">
@@ -125,7 +125,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
         </>)}
 
         <h2>{rOn ? 'Mon programme habituel' : 'Mon programme de lecture'}</h2>
-        {rOn && <p class="note">Il s'appliquera à votre khatam personnel après le Ramadan.</p>}
+        {rOn && <p class="note">Il s'appliquera à votre khatm personnel après le Ramadan.</p>}
         <p class="note">La portion du jour ({pagesLabel(portionPages(sample[0], sample[1]))}) est découpée en séances. Changez de programme quand vous voulez.</p>
         <div class="progs">
           {progs.map((p) => (
@@ -138,7 +138,7 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
         {s.programmeId === CUSTOM_ID && <CustomEditor sample={sample} />}
 
         {k && (<>
-          <h2>Gérer mon khatam</h2>
+          <h2>Gérer mon khatm</h2>
           <div class="card">
             {notStarted && !trial && (
               <div class="setting">
@@ -153,16 +153,16 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
               <div class="setting"><div>Mode essai<small>Commencé aujourd'hui, prévu le {formatDate(k.plannedStart!)}</small></div>
                 <button class="ghost" onClick={() => { stopTrial(); toast('Retour à la date prévue'); }}>Arrêter l'essai</button></div>
             )}
-            {finished && <button class="btn teal" onClick={onNewKhatam}>Commencer un nouveau khatam</button>}
-            {active && !stopping && <button class="link stop-link" onClick={() => setStopping(true)}>Arrêter ce khatam</button>}
+            {finished && <button class="btn teal" onClick={onNewKhatam}>Commencer un nouveau khatm</button>}
+            {active && !stopping && <button class="link stop-link" onClick={() => setStopping(true)}>Arrêter ce khatm</button>}
             {active && stopping && (
               <div class="confirm">
-                <p>Arrêter « {k.name} » ? Vous pourrez ensuite commencer un nouveau khatam.</p>
+                <p>Arrêter « {k.name} » ? Vous pourrez ensuite commencer un nouveau khatm.</p>
                 <div class="actions-row">
                   {hasProgress(s) && (
-                    <button class="btn teal" onClick={() => { stopKhatam(true); setStopping(false); toast('Khatam gardé dans l\'historique'); }}>Garder dans l'historique</button>
+                    <button class="btn teal" onClick={() => { stopKhatam(true); setStopping(false); toast('Khatm gardé dans l\'historique'); }}>Garder dans l'historique</button>
                   )}
-                  <button class="btn danger-fill" onClick={() => { stopKhatam(false); setStopping(false); toast('Khatam supprimé'); }}>Supprimer définitivement</button>
+                  <button class="btn danger-fill" onClick={() => { stopKhatam(false); setStopping(false); toast('Khatm supprimé'); }}>Supprimer définitivement</button>
                   <button class="ghost" onClick={() => setStopping(false)}>Annuler</button>
                 </div>
                 {hasProgress(s) && <p class="note">Gardé dans l'historique, il pourra être repris là où vous vous êtes arrêté.</p>}
@@ -195,10 +195,10 @@ export function Programme({ onNewKhatam }: { onNewKhatam: () => void }) {
                     <div class="confirm">
                       <p>{h.progress
                         ? `Vous reprenez au jour ${day} sur ${h.days}, à partir d'aujourd'hui. Les dates sont décalées et vos jours déjà lus sont conservés.`
-                        : `Les jours déjà lus n'avaient pas été enregistrés pour ce khatam : il reprendra au jour 1, à partir d'aujourd'hui.`}
+                        : `Les jours déjà lus n'avaient pas été enregistrés pour ce khatm : il reprendra au jour 1, à partir d'aujourd'hui.`}
 </p>
                       <div class="actions-row">
-                        <button class="btn teal" onClick={() => { resumeKhatam(h.id); setPending(null); toast(`« ${h.name} » repris`); }}>Reprendre ce khatam</button>
+                        <button class="btn teal" onClick={() => { resumeKhatam(h.id); setPending(null); toast(`« ${h.name} » repris`); }}>Reprendre ce khatm</button>
                         <button class="ghost" onClick={() => setPending(null)}>Annuler</button>
                       </div>
                     </div>
@@ -273,7 +273,7 @@ function CustomEditor({ sample }: { sample: [number, number] }) {
   return (
     <div class="card">
       <h3>Mes séances</h3>
-      <p class="note">Choisissez le moment et l'heure de chaque séance. La portion du jour est partagée automatiquement à parts égales, selon la durée de votre khatam.</p>
+      <p class="note">Choisissez le moment et l'heure de chaque séance. La portion du jour est partagée automatiquement à parts égales, selon la durée de votre khatm.</p>
       {list.map((x, i) => (
         <div class="crow" key={i}>
           <select class="cname" aria-label={`Moment de la séance ${i + 1}`} value={known(x.label) ? x.label : '__autre'}
