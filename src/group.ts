@@ -13,7 +13,7 @@ import type { Firestore, Unsubscribe } from 'firebase/firestore';
 import { useEffect, useState } from 'preact/hooks';
 import { getState, update, subscribe, todayISO } from './store';
 import type { Gender, GroupState } from './store';
-import { currentRamadanId } from './store';
+import { currentRamadanId, isCurrentSeason } from './store';
 import { ramadanStart, RAMADAN_KHATAM_DAYS } from './config';
 import { pushGroupMessage, linkPushToAccount } from './push';
 
@@ -132,7 +132,7 @@ export async function findGroup(codeInput: string): Promise<GroupInfo | null> {
 /** Peut-on demander à entrer ? Pas de mixité dans les groupes classiques, et une limite de membres. */
 export function joinBlock(info: GroupInfo, gender: Gender | null): string | null {
   if (!gender) return 'Indiquez d\'abord dans « Mon profil » (onglet Réglages) si vous êtes une femme ou un homme.';
-  if (info.purpose === 'ramadan' && info.season !== currentRamadanId()) return 'Ce groupe était pour un autre Ramadan.';
+  if (info.purpose === 'ramadan' && !isCurrentSeason(info.season)) return info.season.endsWith('-essai') ? "Ce groupe a été créé avec les outils de test : simulez aussi un Ramadan sur ce téléphone (onglet Réglages) pour le rejoindre." : 'Ce groupe était pour un Ramadan précédent.';
   if (info.kind === 'classic' && info.gender && info.gender !== gender)
     return info.gender === 'f' ? 'Ce groupe est réservé aux sœurs.' : 'Ce groupe est réservé aux frères.';
   if (info.memberCount >= MAX_MEMBERS[info.kind]) return 'Ce groupe est complet.';

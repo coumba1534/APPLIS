@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useStore, currentDay, update, syncRamadanStart, closeRamadanIfOver, ramadanActive, currentRamadanId, canJoinRamadan, joinRamadan } from './store';
+import { useStore, currentDay, update, syncRamadanStart, closeRamadanIfOver, ramadanActive, isCurrentSeason, canJoinRamadan, joinRamadan } from './store';
 import { loadConfig, useConfig } from './config';
 import { absOf, juzOf, pageOf } from './data/quran';
 import { portion } from './data/khatam';
@@ -71,7 +71,7 @@ export function App() {
   }, []);
   // Dans un groupe du Ramadan, on fait le khatm du Ramadan : il démarre tout seul au 1er jour (puis l'accueil du Ramadan s'ouvre).
   useEffect(() => {
-    if (s.group?.purpose === 'ramadan' && s.group.season === currentRamadanId() && canJoinRamadan(s)) joinRamadan();
+    if (s.group?.purpose === 'ramadan' && isCurrentSeason(s.group.season) && canJoinRamadan(s)) joinRamadan();
   });
   // Réglages à distance : à l'ouverture et chaque fois qu'on revient dans l'appli.
   useEffect(() => {

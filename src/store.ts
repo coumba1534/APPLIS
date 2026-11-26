@@ -552,7 +552,19 @@ export function syncRamadanStart() {
 const isTestRamadan = (r: RamadanState) => r.khatam.id.endsWith('-essai');
 
 /** Identifiant du khatam du Ramadan de cette année (ou du Ramadan simulé). */
-export const currentRamadanId = () => `ramadan-${ramadanStart()}${ramadanTest() ? '-essai' : ''}`;
+/**
+ * Identifiant du Ramadan en cours. Il suit l'année de l'hégire (« Ramadan 1448 » → ramadan-1448) et non la date :
+ * si la date est corrigée à l'annonce de la lune, les groupes et l'historique restent ceux du même Ramadan.
+ * En essai (outils de test), il suit la date simulée.
+ */
+export const currentRamadanId = () => {
+  if (ramadanTest()) return `ramadan-${ramadanStart()}-essai`;
+  const year = ramadanName().match(/\d{4}/)?.[0];
+  return year ? `ramadan-${year}` : `ramadan-${ramadanStart()}`;
+};
+/** Ce groupe est-il du Ramadan en cours ? (En essai, tous les groupes d'essai comptent, quelle que soit la date simulée.) */
+export const isCurrentSeason = (season: string) =>
+  season === currentRamadanId() || (!!ramadanTest() && season.endsWith('-essai'));
 
 /** Le khatam qu'on lit en ce moment : celui du Ramadan pendant le mois (si on l'a rejoint), sinon le personnel (s'il n'est pas en pause). */
 export function activeTrackId(s: State = state): TrackId | null {
