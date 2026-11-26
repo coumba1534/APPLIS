@@ -1,5 +1,5 @@
 // Petits éléments partagés : messages éphémères (toast) et icônes de navigation.
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 
 let setMsg: ((m: string | null) => void) | null = null;
 let timer: number | undefined;
@@ -23,3 +23,44 @@ export const icons = {
   group: <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.2" /><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" /><circle cx="17" cy="8" r="2.5" /><path d="M16 13.6c2.4 0 4 1.4 4.5 4" /></svg>,
   bell: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2.8l1.6 2.2 2.7-.6.7 2.6 2.6.7-.6 2.7 2.2 1.6-2.2 1.6.6 2.7-2.6.7-.7 2.6-2.7-.6L12 21.2l-1.6-2.2-2.7.6-.7-2.6-2.6-.7.6-2.7L2.8 12l2.2-1.6-.6-2.7 2.6-.7.7-2.6 2.7.6z" /></svg>,
 };
+
+/**
+ * Fermer une fenêtre du bas en la faisant glisser vers le bas.
+ * Le geste ne démarre que si le contenu touché est déjà tout en haut (sinon on fait défiler la liste).
+ */
+export function useSwipeClose(onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; dy: number; t: number } | null>(null);
+  const onTouchStart = (e: TouchEvent) => {
+    const el = ref.current;
+    if (!el) return;
+    // Remonter du point touché jusqu'à la fenêtre : si une zone qui défile n'est pas en haut, on la laisse défiler.
+    for (let n = e.target as HTMLElement | null; n && n !== el.parentElement; n = n.parentElement) {
+      if (n.scrollTop > 0) return;
+      if (n === el) break;
+    }
+    drag.current = { y: e.touches[0].clientY, dy: 0, t: Date.now() };
+  };
+  const onTouchMove = (e: TouchEvent) => {
+    const d = drag.current, el = ref.current;
+    if (!d || !el) return;
+    d.dy = Math.max(0, e.touches[0].clientY - d.y);
+    if (d.dy > 0) {
+      e.preventDefault();
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${d.dy}px)`;
+    }
+  };
+  const onTouchEnd = () => {
+    const d = drag.current, el = ref.current;
+    drag.current = null;
+    if (!d || !el) return;
+    const fast = d.dy > 40 && d.dy / (Date.now() - d.t) > 0.6;
+    el.style.transition = 'transform .22s ease-out';
+    if (d.dy > el.offsetHeight * 0.25 || fast) {
+      el.style.transform = 'translateY(100%)';
+      window.setTimeout(onClose, 200);
+    } else el.style.transform = '';
+  };
+  return { ref, onTouchStart, onTouchMove, onTouchEnd };
+}

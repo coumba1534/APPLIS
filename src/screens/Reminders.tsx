@@ -7,7 +7,7 @@ import { ramadanNotifications } from '../device';
 import { programmeOf, sessionsFor } from '../data/programmes';
 import { portion, pagesLabel } from '../data/khatam';
 import { askNotifications, notificationPermission, notificationsSupported, notify, timeFor, isIOS, isStandalone } from '../device';
-import { toast } from '../ui';
+import { toast, useSwipeClose } from '../ui';
 import { APP_NAME, APP_FULL_NAME } from '../brand';
 
 export function Reminders() {
@@ -88,14 +88,15 @@ export function Reminders() {
 /** La page de confidentialité (même texte que la page publique public/confidentialite.html). */
 function PrivacySheet({ onClose }: { onClose: () => void }) {
   const [html, setHtml] = useState('');
+  const swipe = useSwipeClose(onClose);
   useEffect(() => {
-    fetch('confidentialite.html').then((r) => r.text())
+    fetch('confidentialite.html', { cache: 'no-cache' }).then((r) => r.text())
       .then((t) => setHtml(new DOMParser().parseFromString(t, 'text/html').getElementById('privacy')?.innerHTML ?? ''))
       .catch(() => setHtml('<p>Page indisponible sans connexion.</p>'));
   }, []);
   return (
     <div class="sheet-backdrop" onClick={onClose}>
-      <div class="sheet privacy-sheet" onClick={(e) => e.stopPropagation()}>
+      <div class="sheet privacy-sheet" role="dialog" aria-label="Confidentialité" onClick={(e) => e.stopPropagation()} {...swipe}>
         <div class="sheet-head"><b>Confidentialité</b><button class="link" onClick={onClose}>Fermer</button></div>
         <div class="privacy" dangerouslySetInnerHTML={{ __html: html.replace(/<h1>.*?<\/h1>/, '') }} />
       </div>

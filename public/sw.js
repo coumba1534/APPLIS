@@ -1,5 +1,5 @@
 // Service worker : l'appli et le texte du Coran restent disponibles sans connexion.
-const VERSION = 'v14';
+const VERSION = 'v15';
 const CACHE = `khatam-${VERSION}`;
 // Chemins relatifs à l'emplacement du service worker (racine du site ou sous-dossier).
 const ROOT = new URL('./', self.location).href;
@@ -11,7 +11,7 @@ const PRECACHE = ['', 'manifest.webmanifest', 'config.json', 'confidentialite.ht
   'data/ar-hafs.json', 'data/mushaf.json', 'data/ar.json', 'data/fr.json', ...self.__ASSETS__].map((p) => ROOT + p);
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -29,8 +29,8 @@ self.addEventListener('fetch', (event) => {
   const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (url.origin !== self.location.origin && !isFont) return;
 
-  // Réglages à distance : toujours le plus récent, le cache sert seulement hors connexion.
-  if (url.origin === self.location.origin && url.pathname.endsWith('/config.json')) {
+  // Réglages à distance et confidentialité : toujours le plus récent, le cache sert seulement hors connexion.
+  if (url.origin === self.location.origin && (url.pathname.endsWith('/config.json') || url.pathname.endsWith('/confidentialite.html'))) {
     event.respondWith(
       fetch(req).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return res; })
         .catch(() => caches.match(req)),
