@@ -47,6 +47,7 @@ Maquette : https://claude.ai/artifact/N2red9a8keoGj6YJorP27n. Après « Rejoindr
 - **Page d'installation** validée (maquette https://claude.ai/artifact/WrBPWGqnJTZ1iPcH1HJ17b, version « lien simple », sans bloc d'invitation) : logo, « Khatm al-Qur'an », repères (gratuit, sans pub, sans compte, hors connexion), étapes iPhone / Android (onglet choisi selon le téléphone), 4 questions, contact. **Choix A** : dans Safari/Chrome sans appli installée, on voit **seulement** cette page (pas d'usage dans le navigateur).
 - **Invitation par code seul** : plus de lien d'invitation `#CODE` ; message « Installe l'appli : <lien> · Groupe › Rejoindre · code XXXXXX ». Les liens d'invitation reviendront avec l'appli mobile.
 - Stores (rappel donné le 26/11) : Apple 99 $/an (nom légal affiché si compte personnel), Google 25 $ une fois + 12 testeurs pendant 14 jours pour un compte personnel ; Capacitor, pas besoin de Mac.
+- **Piste retenue pour plus tard** (elle y réfléchit) : **App Store d'abord** (ses connaissances sont presque toutes sur iPhone ; TestFlight pour la répétition générale), Android reste en appli web en attendant (12 testeurs Android difficiles à trouver). À décider par elle : nom affiché sur la fiche Apple (le sien ou une structure), puis création du compte Apple Developer.
 
 ## Sauvegarde et code personnel (en place le 26/11/2026)
 
