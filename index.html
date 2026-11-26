@@ -20,7 +20,7 @@
       #splash { position: fixed; inset: 0; z-index: 100; background: #F4EAD6; color: #1F5C52; display: grid; place-items: center; text-align: center; transition: opacity .3s ease }
       #splash.out { opacity: 0; pointer-events: none }
       #splash .in { display: grid; gap: 10px; justify-items: center; padding: 0 24px }
-      #splash img { width: min(50vw, 220px); height: auto; aspect-ratio: 1; margin-bottom: 10px }
+      #splash img { display: block; width: 132px; height: 132px; margin-bottom: 12px }
       #splash .lat { font: 700 24px "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif }
       #splash .sub { font: 12px "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #8A6A3A }
       @media (prefers-reduced-motion: reduce) { #splash { transition: none } }
@@ -29,7 +29,7 @@
   <body>
     <div id="splash" aria-hidden="true">
       <div class="in">
-        <img src="icons/icon-512.png" alt="" />
+        <img src="icons/icon-512.png" width="132" height="132" alt="" />
         <div class="lat">Khatm al-Qur'an</div>
         <div class="sub">Lire le Coran en entier</div>
       </div>
