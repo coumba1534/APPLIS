@@ -40,7 +40,9 @@ export function fb(): Promise<Fb> {
       // Tests : émulateur Firebase local (jamais utilisé par les vrais utilisateurs).
       const emu = (() => { try { return localStorage.getItem('khatm-emulateur'); } catch { return null; } })();
       const app = initializeApp(emu ? { ...firebaseConfig, projectId: 'demo-khatm' } : firebaseConfig);
-      const auth = authMod.getAuth(app);
+      // Connexion gardée dans le téléphone ; une connexion retrouvée grâce au code personnel
+      // (déposée par src/backup.ts) est reprise depuis le stockage local.
+      const auth = authMod.initializeAuth(app, { persistence: [authMod.indexedDBLocalPersistence, authMod.browserLocalPersistence] });
       const db = fs.getFirestore(app);
       if (emu) { authMod.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true }); fs.connectFirestoreEmulator(db, '127.0.0.1', 8085); }
       await auth.authStateReady();

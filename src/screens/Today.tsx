@@ -9,7 +9,7 @@ import { toast } from '../ui';
 import { InstallCard } from './InstallCard';
 import { RamadanBanner } from './RamadanBanner';
 import { Moon } from './RamadanArt';
-import { GenderCard } from './Profile';
+import { GenderCard, BackupNoteCard } from './Profile';
 import { useLive } from '../group';
 
 /** Sur la carte du Ramadan : où en est le groupe ce soir. */
@@ -67,6 +67,7 @@ export function Today(props: Props) {
   return (
     <>
       <GenderCard />
+      <BackupNoteCard />
       {s.ramadanEnded && (
         <div class="card ramadan-end">
           <h3>{s.ramadanEnded.finished ? `${s.ramadanEnded.name} : khatm terminé` : `${s.ramadanEnded.name} est terminé`}</h3>

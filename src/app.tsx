@@ -10,6 +10,7 @@ import { Programme } from './screens/Programme';
 import { Group, setPendingCode } from './screens/Group';
 import { startGroupSync, setNoticeHandler } from './group';
 import { startPush } from './push';
+import { startBackup } from './backup';
 import type { Notice } from './group';
 
 // Lien d'invitation …/APPLIS/#K7M4QX : on ouvre l'onglet Groupe sur ce code.
@@ -53,7 +54,7 @@ export function App() {
   const [finaleSeen, setFinaleSeen] = useState<string[]>(finishedIds);
 
   useEffect(() => { const id = startReminders(); return () => clearInterval(id); }, []);
-  useEffect(() => { setNoticeHandler(setNotice); startGroupSync(); startPush(); }, []);
+  useEffect(() => { setNoticeHandler(setNotice); startGroupSync(); startPush(); startBackup(); }, []);
   // Lien d'invitation ouvert alors que l'appli l'est déjà : on va sur l'onglet Groupe avec ce code.
   const [inviteKey, setInviteKey] = useState(0);
   useEffect(() => {

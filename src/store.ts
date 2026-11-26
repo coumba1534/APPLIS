@@ -124,6 +124,9 @@ export interface State {
   hideRamadanBanner: string | null;
   /** Le khatam personnel en cours (un seul à la fois), ou null s'il n'y en a pas. */
   khatam: Khatam | null;
+  /** Code personnel de sauvegarde (KHTM-XXXX-XXXX), et s'il a été noté. */
+  backupCode: string;
+  backupNoted: boolean;
   /** Le groupe dont on fait partie, et la demande en attente. */
   group: GroupState | null;
   groupRequest: GroupRequest | null;
@@ -173,6 +176,8 @@ const initial: State = {
   onboarded: false,
   name: '',
   gender: null,
+  backupCode: '',
+  backupNoted: false,
   group: null,
   groupRequest: null,
   groupCode: '',

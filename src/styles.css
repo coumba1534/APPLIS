@@ -585,3 +585,7 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 @media (prefers-reduced-motion: reduce) { .gw-in, .gw-moon { animation: none } }
 .night-card { --night: #071513; --night-2: #0E2622; --gold: #E9B45F; --gold-soft: #F6DDB0; --cream: #F7F0E1; --rw-line: rgba(233, 180, 95, .28) }
 .gw .rw-greet { text-transform: none; letter-spacing: 0; font-size: 30px; color: var(--cream) }
+/* Code personnel (sauvegarde) */
+.backup-card { border-color: var(--teal); }
+.bcode { font: 700 26px var(--display); letter-spacing: .1em; text-align: center; color: var(--teal); background: var(--teal-soft); border-radius: 14px; padding: 10px 0; font-variant-numeric: tabular-nums; user-select: all; -webkit-user-select: all }
+.restore { display: grid; gap: 10px }

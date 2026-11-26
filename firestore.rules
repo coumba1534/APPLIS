@@ -89,6 +89,19 @@ service cloud.firestore {
       }
     }
 
+    // Sauvegardes chiffrées (code personnel). On ne les trouve qu'avec leur identifiant, tiré du code :
+    // pas de liste. Seul le propriétaire (le même compte, retrouvé grâce au code) peut les modifier.
+    match /backups/{id} {
+      allow get: if signedIn();
+      allow create: if signedIn() && request.resource.data.owner == me()
+        && request.resource.data.keys().hasOnly(['owner', 'iv', 'ct', 'at'])
+        && request.resource.data.ct is string && request.resource.data.ct.size() < 700000;
+      allow update: if signedIn() && resource.data.owner == me() && request.resource.data.owner == me()
+        && request.resource.data.keys().hasOnly(['owner', 'iv', 'ct', 'at'])
+        && request.resource.data.ct is string && request.resource.data.ct.size() < 700000;
+      allow delete: if signedIn() && resource.data.owner == me();
+    }
+
     // Messages pour un membre (demande acceptée ou refusée, retrait), écrits par l'administrateur du groupe.
     match /notices/{uid}/items/{id} {
       allow read, delete: if signedIn() && uid == me();

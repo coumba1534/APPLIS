@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { update, getState, newId, todayISO } from '../store';
 import type { Gender } from '../store';
-import { GenderChoice } from './Profile';
+import { GenderChoice, RestoreForm } from './Profile';
 import { ramadanStart } from '../config';
 import { APP_NAME } from '../brand';
 import { allProgrammes, sessionsFor } from '../data/programmes';
@@ -14,6 +14,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState(init.name);
   const [gender, setGender] = useState<Gender | null>(init.gender ?? null);
+  const [restoring, setRestoring] = useState(false);
   const [prog, setProg] = useState(init.programmeId);
   const [code, setCode] = useState(init.groupCode);
   const [dur, setDur] = useState<'ramadan' | '30' | '60' | '90'>('30');
@@ -38,6 +39,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       <p>Bienvenue dans {APP_NAME} : lisez le Coran en entier, à votre rythme, et ensemble.</p>
       <label class="field">Votre prénom<input type="text" value={name} placeholder="Ex. Aminata ou Moussa" autocomplete="given-name" onInput={(e) => setName((e.target as HTMLInputElement).value)} /></label>
       <div class="field">Vous êtes<GenderChoice value={gender} onChange={setGender} /></div>
+      {!restoring
+        ? <button class="link" style="justify-self:start" onClick={() => setRestoring(true)}>Vous avez déjà utilisé Khatm ? Retrouver ma progression</button>
+        : <RestoreForm onCancel={() => setRestoring(false)} />}
       <p class="note">Pour les groupes : ils ne sont pas mixtes. Un groupe de sœurs n'accueille que des sœurs, un groupe de frères que des frères.</p>
     </>,
     <>

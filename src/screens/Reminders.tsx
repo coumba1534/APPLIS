@@ -1,4 +1,4 @@
-import { ProfileCard } from './Profile';
+import { ProfileCard, BackupCard } from './Profile';
 import { pushActive, testPush } from '../push';
 import { useState } from 'preact/hooks';
 import { useStore, update, currentDay, setReminderTime, activeTrackId, getTrack, simulateRamadan, setRamadanSetup, formatDate, addDays, todayISO } from '../store';
@@ -70,6 +70,7 @@ export function Reminders() {
       </div>
       <h2>Mon profil</h2>
       <ProfileCard inGroup={!!s.group || !!s.groupRequest} />
+      <BackupCard />
       {config.testMode && <TestTools />}
     </>
   );
