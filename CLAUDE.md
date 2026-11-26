@@ -41,6 +41,13 @@ Maquette : https://claude.ai/artifact/N2red9a8keoGj6YJorP27n. Après « Rejoindr
 - **Onglet Réglages** (ex « Rappels », changé le 26/11/2026, `src/screens/Reminders.tsx`, identifiant interne `bell` gardé) : Rappels (notifications, heures des séances), Mon profil (prénom, genre figé, code personnel), À propos (sources, lien « Confidentialité »), Outils de test.
 - **Confidentialité** (26/11/2026) : un seul texte, `public/confidentialite.html`, page publique https://coumba1534.github.io/APPLIS/confidentialite.html (pour les stores) et affiché dans l'appli (fenêtre ouverte depuis Réglages > À propos, qui lit cette page). Elle a refusé pour l'instant : bouton « Supprimer mes données », polices dans l'appli (ne pas surcharger l'appli) ; tout est mentionné dans le texte (effacement sur demande par e-mail avec le code). **Contact : khatmalquran@gmail.com** (adresse dédiée, pas son nom ; écrite seulement dans ce fichier). Mettre à jour le texte à chaque nouvelle donnée envoyée hors du téléphone.
 
+## Si les stores ne se font pas (décidé le 26/11/2026, à NE PAS coder tant qu'elle ne le demande pas)
+
+- Plan de secours si elle n'arrive pas à publier sur l'App Store / le Play Store : rester en appli web et la présenter comme un outil à mettre sur l'écran d'accueil.
+- **Page d'installation** validée (maquette https://claude.ai/artifact/WrBPWGqnJTZ1iPcH1HJ17b, version « lien simple », sans bloc d'invitation) : logo, « Khatm al-Qur'an », repères (gratuit, sans pub, sans compte, hors connexion), étapes iPhone / Android (onglet choisi selon le téléphone), 4 questions, contact. **Choix A** : dans Safari/Chrome sans appli installée, on voit **seulement** cette page (pas d'usage dans le navigateur).
+- **Invitation par code seul** : plus de lien d'invitation `#CODE` ; message « Installe l'appli : <lien> · Groupe › Rejoindre · code XXXXXX ». Les liens d'invitation reviendront avec l'appli mobile.
+- Stores (rappel donné le 26/11) : Apple 99 $/an (nom légal affiché si compte personnel), Google 25 $ une fois + 12 testeurs pendant 14 jours pour un compte personnel ; Capacitor, pas besoin de Mac.
+
 ## Sauvegarde et code personnel (en place le 26/11/2026)
 
 - Elle a préféré un **code personnel** (`KHTM-XXXX-XXXX`) à un compte nom d'utilisateur + mot de passe (« ne pas compliquer l'appli »). Sauvegarde **automatique pour tout le monde** (`src/backup.ts`, 5 s après chaque série de changements), **chiffrée sur le téléphone** avec une clé tirée du code (AES-GCM), rangée dans Firestore `backups/{empreinte SHA-256 du code}` (pas de liste ; seul le même compte peut la modifier : règles dans `firestore.rules`, 51 vérifications sur l'émulateur).
