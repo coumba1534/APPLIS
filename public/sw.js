@@ -1,5 +1,5 @@
 // Service worker : l'appli et le texte du Coran restent disponibles sans connexion.
-const VERSION = 'v12';
+const VERSION = 'v13';
 const CACHE = `khatam-${VERSION}`;
 // Chemins relatifs à l'emplacement du service worker (racine du site ou sous-dossier).
 const ROOT = new URL('./', self.location).href;
@@ -7,7 +7,7 @@ const ROOT = new URL('./', self.location).href;
 self.__ASSETS__ = [];
 // Tout ce qu'il faut pour ouvrir l'appli et lire sans connexion : l'appli elle-même, le mushaf,
 // les deux textes arabes et la traduction.
-const PRECACHE = ['', 'manifest.webmanifest', 'config.json', 'icons/icon-192.png', 'icons/icon.svg',
+const PRECACHE = ['', 'manifest.webmanifest', 'config.json', 'confidentialite.html', 'icons/icon-192.png', 'icons/icon.svg',
   'data/ar-hafs.json', 'data/mushaf.json', 'data/ar.json', 'data/fr.json', ...self.__ASSETS__].map((p) => ROOT + p);
 
 self.addEventListener('install', (event) => {

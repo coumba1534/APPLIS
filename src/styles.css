@@ -589,3 +589,9 @@ select, input[type=time], input[type=date], input[type=text], textarea { border:
 .backup-card { border-color: var(--teal); }
 .bcode { font: 700 26px var(--display); letter-spacing: .1em; text-align: center; color: var(--teal); background: var(--teal-soft); border-radius: 14px; padding: 10px 0; font-variant-numeric: tabular-nums; user-select: all; -webkit-user-select: all }
 .restore { display: grid; gap: 10px }
+
+.privacy-sheet { max-height: 88vh }
+.privacy h2 { text-transform: none; letter-spacing: 0; font-size: 15px; color: var(--teal); margin: 14px 0 2px; font-weight: 700 }
+.privacy p, .privacy li { margin: 4px 0; font-size: 14px }
+.privacy ul { padding-left: 18px; margin: 0 }
+.privacy .muted { color: var(--muted); font-size: 12.5px }

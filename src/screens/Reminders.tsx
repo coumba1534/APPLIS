@@ -1,6 +1,6 @@
 import { ProfileCard, BackupCard } from './Profile';
 import { pushActive, testPush } from '../push';
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { useStore, update, currentDay, setReminderTime, activeTrackId, getTrack, simulateRamadan, setRamadanSetup, formatDate, addDays, todayISO } from '../store';
 import { useConfig, ramadanTest, ramadanEnd } from '../config';
 import { ramadanNotifications } from '../device';
@@ -13,6 +13,7 @@ import { APP_NAME, APP_FULL_NAME } from '../brand';
 export function Reminders() {
   const s = useStore();
   const [perm, setPerm] = useState(notificationPermission());
+  const [privacy, setPrivacy] = useState(false);
   const config = useConfig();
   const id = activeTrackId(s) ?? 'personal';
   const prog = programmeOf(s, id);
@@ -76,9 +77,29 @@ export function Reminders() {
       <div class="card about">
         <p><b>{APP_FULL_NAME}</b></p>
         <p class="note">Mushaf de Médine et écriture officielle : Complexe du Roi Fahd (KFGQPC) · Autres écritures : The Noble Qur'an Encyclopedia · Traduction : Muhammad Hamidullah (tanzil.net) · Noms des sourates calligraphiés : police de quran.com (licence MIT)</p>
+        <button class="link" style="justify-self:start" onClick={() => setPrivacy(true)}>Confidentialité</button>
       </div>
+      {privacy && <PrivacySheet onClose={() => setPrivacy(false)} />}
       {config.testMode && <TestTools />}
     </>
+  );
+}
+
+/** La page de confidentialité (même texte que la page publique public/confidentialite.html). */
+function PrivacySheet({ onClose }: { onClose: () => void }) {
+  const [html, setHtml] = useState('');
+  useEffect(() => {
+    fetch('confidentialite.html').then((r) => r.text())
+      .then((t) => setHtml(new DOMParser().parseFromString(t, 'text/html').getElementById('privacy')?.innerHTML ?? ''))
+      .catch(() => setHtml('<p>Page indisponible sans connexion.</p>'));
+  }, []);
+  return (
+    <div class="sheet-backdrop" onClick={onClose}>
+      <div class="sheet privacy-sheet" onClick={(e) => e.stopPropagation()}>
+        <div class="sheet-head"><b>Confidentialité</b><button class="link" onClick={onClose}>Fermer</button></div>
+        <div class="privacy" dangerouslySetInnerHTML={{ __html: html.replace(/<h1>.*?<\/h1>/, '') }} />
+      </div>
+    </div>
   );
 }
 
