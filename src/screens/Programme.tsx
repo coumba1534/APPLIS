@@ -248,13 +248,13 @@ function Calendar({ N, done: doneDays, day }: { N: number; done: number[]; day: 
   </>);
 }
 
-/** Rythme personnalisé du Ramadan : les moments choisis, à parts égales. Les heures se règlent dans l'onglet Rappels. */
+/** Rythme personnalisé du Ramadan : les moments choisis, à parts égales. Les heures se règlent dans l'onglet Réglages. */
 function RamadanEditor({ moments }: { moments: string[] }) {
   const set = (next: string[]) => setRamadanSetup({ moments: next });
   return (
     <div class="card">
       <h3>Mes moments du Ramadan</h3>
-      <p class="note">La lecture du jour est partagée à parts égales entre vos moments, rangés dans l'ordre de la journée. Les heures des rappels se règlent dans l'onglet Rappels.</p>
+      <p class="note">La lecture du jour est partagée à parts égales entre vos moments, rangés dans l'ordre de la journée. Les heures des rappels se règlent dans l'onglet Réglages.</p>
       {moments.map((m, i) => (
         <div class="crow crow-r" key={i}>
           <select class="cname" aria-label={`Moment ${i + 1}`} value={m} onChange={(e) => set(moments.map((x, j) => (j === i ? (e.target as HTMLSelectElement).value : x)))}>

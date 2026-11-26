@@ -27,7 +27,7 @@ export function GenderCard() {
   );
 }
 
-/** Mon profil (onglet Rappels) : prénom et genre. Le genre ne se change pas quand on est dans un groupe. */
+/** Mon profil (onglet Réglages) : prénom et genre. Le genre ne se change pas quand on est dans un groupe. */
 export function ProfileCard(_: { inGroup?: boolean }) {
   const s = useStore();
   return (
@@ -84,7 +84,7 @@ export function BackupNoteCard() {
         <button class="btn teal" onClick={() => sendCode(s.backupCode)}>Me l'envoyer</button>
         <button class="ghost" onClick={() => update({ backupNoted: true })}>C'est noté</button>
       </div>
-      <p class="note">Vous le retrouverez à tout moment dans « Mon profil » (onglet Rappels).</p>
+      <p class="note">Vous le retrouverez à tout moment dans « Mon profil » (onglet Réglages).</p>
     </div>
   );
 }

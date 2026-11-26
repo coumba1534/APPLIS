@@ -8,7 +8,7 @@ import { programmeOf, sessionsFor } from '../data/programmes';
 import { portion, pagesLabel } from '../data/khatam';
 import { askNotifications, notificationPermission, notificationsSupported, notify, timeFor, isIOS, isStandalone } from '../device';
 import { toast } from '../ui';
-import { APP_NAME } from '../brand';
+import { APP_NAME, APP_FULL_NAME } from '../brand';
 
 export function Reminders() {
   const s = useStore();
@@ -22,6 +22,7 @@ export function Reminders() {
 
   return (
     <>
+      <h2>Rappels</h2>
       <div class="card">
         <h3>Notifications</h3>
         {!notificationsSupported() ? (
@@ -48,7 +49,7 @@ export function Reminders() {
         {!pushActive() && <p class="note">Une fois les rappels autorisés, ils arrivent même quand l'appli est fermée (appli installée sur l'écran d'accueil, iOS 16.4 ou plus récent).</p>}
       </div>
 
-      <h2>Un rappel par séance</h2>
+      <h2>Heure de chaque séance</h2>
       <div>
         {sessions.map((x) => (
           <div class="setting">
@@ -71,6 +72,11 @@ export function Reminders() {
       <h2>Mon profil</h2>
       <ProfileCard inGroup={!!s.group || !!s.groupRequest} />
       <BackupCard />
+      <h2>À propos</h2>
+      <div class="card about">
+        <p><b>{APP_FULL_NAME}</b></p>
+        <p class="note">Mushaf de Médine et écriture officielle : Complexe du Roi Fahd (KFGQPC) · Autres écritures : The Noble Qur'an Encyclopedia · Traduction : Muhammad Hamidullah (tanzil.net) · Noms des sourates calligraphiés : police de quran.com (licence MIT)</p>
+      </div>
       {config.testMode && <TestTools />}
     </>
   );

@@ -131,7 +131,7 @@ export async function findGroup(codeInput: string): Promise<GroupInfo | null> {
 
 /** Peut-on demander à entrer ? Pas de mixité dans les groupes classiques, et une limite de membres. */
 export function joinBlock(info: GroupInfo, gender: Gender | null): string | null {
-  if (!gender) return 'Indiquez d\'abord dans « Mon profil » (onglet Rappels) si vous êtes une femme ou un homme.';
+  if (!gender) return 'Indiquez d\'abord dans « Mon profil » (onglet Réglages) si vous êtes une femme ou un homme.';
   if (info.purpose === 'ramadan' && info.season !== currentRamadanId()) return 'Ce groupe était pour un autre Ramadan.';
   if (info.kind === 'classic' && info.gender && info.gender !== gender)
     return info.gender === 'f' ? 'Ce groupe est réservé aux sœurs.' : 'Ce groupe est réservé aux frères.';

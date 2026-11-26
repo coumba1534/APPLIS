@@ -21,5 +21,5 @@ export const icons = {
   read: <svg viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5z" /><path d="M12 6.5v13" /></svg>,
   plan: <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>,
   group: <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.2" /><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" /><circle cx="17" cy="8" r="2.5" /><path d="M16 13.6c2.4 0 4 1.4 4.5 4" /></svg>,
-  bell: <svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z" /><path d="M10 20.5a2 2 0 0 0 4 0" /></svg>,
+  bell: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2.8l1.6 2.2 2.7-.6.7 2.6 2.6.7-.6 2.7 2.2 1.6-2.2 1.6.6 2.7-2.6.7-.7 2.6-2.7-.6L12 21.2l-1.6-2.2-2.7.6-.7-2.6-2.6-.7.6-2.7L2.8 12l2.2-1.6-.6-2.7 2.6-.7.7-2.6 2.7.6z" /></svg>,
 };

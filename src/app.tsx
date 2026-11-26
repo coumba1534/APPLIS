@@ -31,7 +31,7 @@ import { startReminders } from './device';
 import { isDark, toggleTheme } from './theme';
 
 type Tab = 'today' | 'read' | 'plan' | 'group' | 'bell';
-const TABS: [Tab, string][] = [['today', "Aujourd'hui"], ['read', 'Lire'], ['plan', 'Programme'], ['group', 'Groupe'], ['bell', 'Rappels']];
+const TABS: [Tab, string][] = [['today', "Aujourd'hui"], ['read', 'Lire'], ['plan', 'Programme'], ['group', 'Groupe'], ['bell', 'Réglages']];
 
 export function App() {
   const s = useStore();
@@ -107,7 +107,7 @@ export function App() {
     read: readerTitle,
     plan: ['Mon programme', 'Mon khatm, à mon rythme'],
     group: ['Mon groupe', 'On avance ensemble'],
-    bell: ['Rappels', 'Notifications du khatm'],
+    bell: ['Réglages', 'Rappels, profil et code personnel'],
   };
 
   /** Ouvre Lire : au verset demandé (début de la portion du jour), sinon au marque-page. */

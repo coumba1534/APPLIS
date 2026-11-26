@@ -72,7 +72,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       <h1>Les rappels</h1>
       <p>Un rappel à l'heure de chaque séance de votre programme :</p>
       <div>{sessionsFor(chosen, sample).map((x) => <div class="setting"><div>{x.label}<small>{pagesLabel(x.pages)}</small></div><b>{x.defaultTime}</b></div>)}</div>
-      <p style="font-size:13px">Vous pourrez changer les heures dans l'onglet Rappels.</p>
+      <p style="font-size:13px">Vous pourrez changer les heures dans l'onglet Réglages.</p>
     </>,
   ];
 
