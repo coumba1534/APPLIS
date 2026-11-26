@@ -1,6 +1,6 @@
-# Logo Khatm (K5, choisi le 26/11/2026)
+# Logo Khatm (K5-V, choisi le 26/11/2026)
 
-« ختم » en koufi (police Reem Kufi, licence SIL OFL), vert #1F5C52 sur sable #F4EAD6, cadre doré #D39A35,
+« ختم » en koufi (police Reem Kufi, licence SIL OFL), vert #1F5C52 sur sable #F4EAD6, cadre vert #1F5C52 (fin),
 rosace de 12 cercles dorés en filigrane (opacité 0,35).
 
 - `k5.html` : l'icône ; `k5-maskable.html` : version resserrée (zone sûre Android).
