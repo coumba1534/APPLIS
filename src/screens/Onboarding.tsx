@@ -42,7 +42,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       {!restoring
         ? <button class="link" style="justify-self:start" onClick={() => setRestoring(true)}>Vous avez déjà utilisé Khatm ? Retrouver ma progression</button>
         : <RestoreForm onCancel={() => setRestoring(false)} />}
-      <p class="note">Pour les groupes : ils ne sont pas mixtes. Un groupe de sœurs n'accueille que des sœurs, un groupe de frères que des frères.</p>
+      <p class="note">Pour les groupes : ils ne sont pas mixtes. Un groupe de sœurs n'accueille que des sœurs, un groupe de frères que des frères. Ce choix ne pourra pas être modifié.</p>
     </>,
     <>
       <h1>Quelle durée pour votre khatm ?</h1>

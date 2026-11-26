@@ -73,9 +73,10 @@ async function schedule(env, b) {
   const items = (Array.isArray(b.items) ? b.items : [])
     .filter((x) => x && Number.isFinite(x.at) && x.at > now - 60000 && x.at < now + HORIZON)
     .slice(0, MAX_ITEMS);
-  const stmts = [env.DB.prepare('DELETE FROM items WHERE sub = ?1').bind(b.id)];
+  // On remplace les rappels à venir ; ceux dont l'heure vient d'arriver restent, pour être envoyés au prochain réveil.
+  const stmts = [env.DB.prepare('DELETE FROM items WHERE sub = ?1 AND at > ?2').bind(b.id, now)];
   for (const x of items) {
-    stmts.push(env.DB.prepare('INSERT OR REPLACE INTO items (sub, at, title, body, tag) VALUES (?1, ?2, ?3, ?4, ?5)')
+    stmts.push(env.DB.prepare('INSERT OR IGNORE INTO items (sub, at, title, body, tag) VALUES (?1, ?2, ?3, ?4, ?5)')
       .bind(b.id, Math.round(x.at), clip(x.title, 80), clip(x.body, 200), clip(x.tag, 80)));
   }
   await env.DB.batch(stmts);
@@ -161,6 +162,10 @@ async function sendDue(env) {
 async function deliver(env, s, msg) {
   try {
     const res = await webPush(env, { endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth }, JSON.stringify(msg));
+    // Journal d'envoi (diagnostic) : on ne garde que les 7 derniers jours.
+    const detail = res.ok ? '' : (await res.text()).slice(0, 200);
+    await env.DB.prepare('INSERT INTO log (at, sub, tag, status, detail) VALUES (?1, ?2, ?3, ?4, ?5)').bind(Date.now(), String(s.id).slice(0, 6), msg.tag, res.status, detail).run();
+    await env.DB.prepare('DELETE FROM log WHERE at < ?1').bind(Date.now() - 7 * 24 * 3600 * 1000).run();
     if (res.status === 404 || res.status === 410) {
       await env.DB.batch([
         env.DB.prepare('DELETE FROM items WHERE sub = ?1').bind(s.id),
@@ -169,7 +174,8 @@ async function deliver(env, s, msg) {
       return false;
     }
     return res.ok;
-  } catch {
+  } catch (e) {
+    try { await env.DB.prepare('INSERT INTO log (at, sub, tag, status, detail) VALUES (?1, ?2, ?3, ?4, ?5)').bind(Date.now(), String(s.id).slice(0, 6), msg.tag, 0, String(e).slice(0, 200)).run(); } catch { /* */ }
     return false;
   }
 }

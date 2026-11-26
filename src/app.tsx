@@ -100,7 +100,8 @@ export function App() {
   }, []);
 
   const day = currentDay(s);
-  const hello = `Assalamou alaykoum${s.name ? `, ${s.name}` : ''}`;
+  // Salam accordé : alayki pour une femme, alayka pour un homme.
+  const hello = `Assalamou ${s.gender === 'f' ? 'alayki' : s.gender === 'm' ? 'alayka' : 'alaykoum'}${s.name ? `, ${s.name}` : ''}`;
   const titles: Record<Tab, [string, string]> = {
     today: [hello, ramadanActive(s) ? `Jour ${Math.min(currentDay(s, 'ramadan'), 29)} · ${s.ramadan!.khatam.name}` : !s.khatam ? 'Prêt pour un nouveau khatm' : day >= 1 && day <= N ? (s.khatam.kind === 'ramadan' ? `Jour ${day} du Ramadan` : `Jour ${day} sur ${N}`) : s.khatam.name],
     read: readerTitle,

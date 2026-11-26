@@ -47,7 +47,7 @@ export function Group() {
     return (
       <div class="card">
         <h3>Une question avant tout</h3>
-        <p>Les groupes ne sont pas mixtes : un groupe de sœurs n'accueille que des sœurs, un groupe de frères que des frères. Vous êtes…</p>
+        <p>Les groupes ne sont pas mixtes : un groupe de sœurs n'accueille que des sœurs, un groupe de frères que des frères. Vous êtes… (ce choix ne pourra pas être modifié)</p>
         <GenderChoice value={null} onChange={(g) => update({ gender: g })} />
       </div>
     );
@@ -66,7 +66,7 @@ export function Group() {
         <button class="ghost" onClick={() => setMode('join')}>Rejoindre un groupe</button>
       </div>
       <div class="card guided-card">
-        <h3>Vous êtes oustaz ou oustaza ?</h3>
+        <h3>{s.gender === 'f' ? 'Vous êtes oustaza ?' : 'Vous êtes oustaz ?'}</h3>
         <p class="note">Créez un groupe pour vos auditeurs, sœurs et frères : chacun dans sa section, vous suivez tout le monde. Jusqu'à {MAX_MEMBERS.guided} membres.</p>
         <button class="btn teal" onClick={() => setMode('guided')}>Créer un groupe encadré</button>
       </div>
@@ -383,7 +383,7 @@ function RamadanIntro({ onMode }: { onMode: (m: 'create' | 'guided' | 'join') =>
         <button class="nc-ghost" onClick={() => onMode('join')}>Rejoindre un groupe</button>
       </div>
       <div class="card guided-card">
-        <h3>Vous êtes oustaz ou oustaza ?</h3>
+        <h3>{s.gender === 'f' ? 'Vous êtes oustaza ?' : 'Vous êtes oustaz ?'}</h3>
         <p class="note">Un groupe du Ramadan pour vos auditeurs, sœurs et frères, chacun dans sa section : vous suivez tout le monde. Jusqu'à {MAX_MEMBERS.guided} membres.</p>
         <button class="btn teal" onClick={() => onMode('guided')}>Créer un groupe encadré</button>
       </div>
