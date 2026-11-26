@@ -35,8 +35,8 @@ const TABS: [Tab, string][] = [['today', "Aujourd'hui"], ['read', 'Lire'], ['pla
 
 export function App() {
   const s = useStore();
-  // À la réouverture, on revient sur le dernier onglet et la dernière lecture.
-  const [tab, setTabState] = useState<Tab>(() => (inviteCode && s.onboarded ? 'group' : s.onboarded && TABS.some(([id]) => id === s.lastTab) ? s.lastTab as Tab : 'today'));
+  // À chaque ouverture, on arrive sur Aujourd'hui (sauf lien d'invitation : onglet Groupe). Lire garde la dernière lecture.
+  const [tab, setTabState] = useState<Tab>(() => (inviteCode && s.onboarded ? 'group' : 'today'));
   /** Message d'un groupe (demande acceptée ou refusée, retrait), affiché en haut de l'écran. */
   const [notice, setNotice] = useState<Notice | null>(null);
   const dayStartJuz = () => (s.khatam ? juzOf(portion(s.khatam.days, Math.min(Math.max(currentDay(s), 1), s.khatam.days))[0]) : 1);
