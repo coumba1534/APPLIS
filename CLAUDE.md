@@ -36,7 +36,7 @@ Maquette : https://claude.ai/artifact/N2red9a8keoGj6YJorP27n. Après « Rejoindr
 - **1a : on peut avoir un groupe de lecture (en pause) ET un groupe du Ramadan en même temps** (deux places : `group` = lecture, `rgroup` = Ramadan).
 - **Codé le 27/11/2026** : `state.group` (lecture) + `state.rgroup` (Ramadan), demandes `groupRequest` / `rgroupRequest` (`GroupSlot`, `slotOf`, `requestKey` dans `src/store.ts` ; ancien groupe du Ramadan rangé dans `group` déplacé tout seul par `splitGroups`). `src/group.ts` : toutes les fonctions prennent la place (`slot`), synchronisation des deux groupes, `useLive(slot)`, `ramadanGroupsOpen` / `RAMADAN_GROUPS_DAYS_BEFORE = 3`. Onglet Groupe : carte Ramadan (nuit et or) en haut pendant l'annonce et la période d'ouverture, puis le groupe de lecture ; dans un groupe du Ramadan, deux onglets « 🌙 Ramadan » / « Groupe de lecture ». Vérifié sur l'émulateur avec deux téléphones (lecture + Ramadan, 1er jour).
 - Plus tard : raccourci « Faire le Ramadan avec mon groupe » pour l'admin d'un groupe de lecture.
-- Page d'installation : message général (khatm toute l'année), bandeau Ramadan seulement à l'approche.
+- Page d'installation : message général (khatm toute l'année), bandeau Ramadan seulement à l'approche. Maquette à jour (à valider) : https://claude.ai/artifact/1qYKKU32UpfiY19nQrh9vZ (remplace la première maquette).
 
 ## Groupes (Firebase en place)
 
