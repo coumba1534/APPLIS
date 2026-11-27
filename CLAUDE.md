@@ -49,6 +49,13 @@ Maquette : https://claude.ai/artifact/N2red9a8keoGj6YJorP27n. Après « Rejoindr
 - Stores (rappel donné le 26/11) : Apple 99 $/an (nom légal affiché si compte personnel), Google 25 $ une fois + 12 testeurs pendant 14 jours pour un compte personnel ; Capacitor, pas besoin de Mac.
 - **Piste retenue pour plus tard** (elle y réfléchit) : **App Store d'abord** (ses connaissances sont presque toutes sur iPhone ; TestFlight pour la répétition générale), Android reste en appli web en attendant (12 testeurs Android difficiles à trouver). À décider par elle : nom affiché sur la fiche Apple (le sien ou une structure), puis création du compte Apple Developer.
 
+## Nom de domaine (décidé le 27/11/2026)
+
+- **khatm.app n'est pas à elle** : il appartient à une autre appli « Khatm – Block apps with Quran » (App Store, Play Store, Chrome ; éditeur codeturnal). Attention au nom dans les stores : publier sous « Khatm al-Qur'an » et vérifier qu'il est libre.
+- Pas de Netlify (offre gratuite trop juste, payant inutile). Choix : **khatmalquran.org** (le moins cher : ~8,50 $ la 1re année puis ~11,20 $/an chez Cloudflare), acheté par elle sur Cloudflare (compte des notifications), pour **un an** (elle pense ne plus en avoir besoin après le passage aux stores ; lui rappeler que la page Confidentialité, `config.json` et les utilisateurs Android web en dépendent).
+- À faire quand elle l'a acheté : DNS vers GitHub Pages (4 A + 4 AAAA vers 185.199.108-111.153 / 2606:50c0:8000-8003::153, www en CNAME), domaine personnalisé dans GitHub Pages + https, origine ajoutée dans `push/worker.js` (ORIGINS, sub VAPID) puis `./push/deploy.sh`, domaine autorisé dans Firebase (par elle), liens (confidentialité, notes). La progression ne suit pas : code personnel, réinstallation, « Retrouver ma progression ».
+- Avec le domaine : mettre en place la **page d'installation** (maquette https://claude.ai/artifact/WrBPWGqnJTZ1iPcH1HJ17b, choix A) et l'**invitation par code seul** (voir la section « Si les stores ne se font pas »).
+
 ## Sauvegarde et code personnel (en place le 26/11/2026)
 
 - Elle a préféré un **code personnel** (`KHTM-XXXX-XXXX`) à un compte nom d'utilisateur + mot de passe (« ne pas compliquer l'appli »). Sauvegarde **automatique pour tout le monde** (`src/backup.ts`, 5 s après chaque série de changements), **chiffrée sur le téléphone** avec une clé tirée du code (AES-GCM), rangée dans Firestore `backups/{empreinte SHA-256 du code}` (pas de liste ; seul le même compte peut la modifier : règles dans `firestore.rules`, 51 vérifications sur l'émulateur).
