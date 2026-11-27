@@ -321,6 +321,16 @@ export function pauseEnd(s: State = state) {
 
 /** Jours du Ramadan (annoncé) compris entre a et b : le khatm de groupe est en pause pendant le mois. */
 const ramadanDaysBetween = (a: string, b: string) => overlap(ramadanStart(), ramadanEnd(), a, b);
+/**
+ * Un groupe de lecture croise-t-il le Ramadan (date estimée) ? Il fait alors une pause pendant tout le mois :
+ * pendant le Ramadan, seuls les groupes du Ramadan (29 jours) sont possibles.
+ */
+export const groupCrossesRamadan = (start: string, days: number) => ramadanStart() <= addDays(start, days - 1) && ramadanEnd() >= start;
+/** Dernier jour d'un groupe de lecture : prolongé des jours du Ramadan (à partir de son début) s'il le croise. */
+export const groupEnd = (start: string, days: number) => {
+  const plain = addDays(start, days - 1);
+  return groupCrossesRamadan(start, days) ? addDays(plain, ramadanDaysBetween(start, ramadanEnd())) : plain;
+};
 /** Vrai si le khatm du groupe est en pause aujourd'hui (Ramadan). */
 export function groupPaused(s: State = state) {
   const t = todayISO();
@@ -329,11 +339,7 @@ export function groupPaused(s: State = state) {
 
 /** Dernier jour d'un khatam (le khatam personnel et celui du groupe sont prolongés de leurs jours de pause). */
 export const endDate = (k: Khatam, s: State = state) => {
-  if (k.kind === 'group') {
-    // Fin sans pause, puis prolongée des jours du Ramadan qui tombent dedans (une seule fois suffit : un Ramadan par an).
-    const plain = addDays(k.start, k.days - 1);
-    return addDays(plain, ramadanDaysBetween(k.start, addDays(plain, 30)));
-  }
+  if (k.kind === 'group') return groupEnd(k.start, k.days);
   return addDays(k.start, k.days - 1 + (s.khatam && k.id === s.khatam.id ? pausedDays(s, k.start, '9999-12-31') : 0));
 };
 

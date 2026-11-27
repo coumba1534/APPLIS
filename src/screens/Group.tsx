@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { useStore, currentDay, endDate, formatDate, todayISO, addDays, groupPaused, requestKey } from '../store';
+import { useStore, currentDay, endDate, formatDate, todayISO, addDays, groupPaused, requestKey, groupCrossesRamadan, groupEnd } from '../store';
 import type { Gender, GroupSlot } from '../store';
 import { BUILT_IN, programmeById } from '../data/programmes';
 import { dayLabel } from '../data/khatam';
@@ -12,7 +12,7 @@ import { GenderChoice } from './Profile';
 import { update } from '../store';
 import {
   createGroup, findGroup, requestJoin, cancelRequest, acceptRequest, refuseRequest, removeMember, leaveGroup,
-  joinBlock, cleanCode, inviteLink, useLive, MAX_MEMBERS, ramadanGroupsOpen, RAMADAN_GROUPS_DAYS_BEFORE,
+  joinBlock, cleanCode, inviteLink, useLive, MAX_MEMBERS, ramadanGroupsOpen, inRamadanMonth, RAMADAN_GROUPS_DAYS_BEFORE,
 } from '../group';
 import type { GroupInfo, Member } from '../group';
 
@@ -79,6 +79,15 @@ export function Group() {
 /** Pas encore de groupe de lecture : créer, rejoindre, ou groupe encadré. */
 function ReadingHome({ onMode }: { onMode: (m: Mode) => void }) {
   const s = useStore();
+  if (inRamadanMonth()) {
+    return (
+      <div class="card">
+        <h3>Groupes de lecture</h3>
+        <p>Pendant le Ramadan, seuls les groupes du Ramadan (29 jours) sont possibles. Les groupes de lecture sont en pause et reprennent après l'Aïd.</p>
+        <p class="note">Vous pourrez créer ou rejoindre un groupe de lecture à partir du {formatDate(addDays(ramadanEnd(), 1))}, in shaa Allah.</p>
+      </div>
+    );
+  }
   return (
     <>
       <div class="card">
@@ -150,6 +159,9 @@ function CreateForm({ kind, purpose, onCancel }: { kind: 'classic' | 'guided'; p
         <div class="chips">{BUILT_IN.map((p) => <button class={`chip ${prog === p.id ? 'on' : ''}`} onClick={() => setProg(p.id)}>{p.name}</button>)}</div>
       </div>
       {days >= 1 && days <= 365 && <p class="note">{days} jours · {dayLabel(days)}. La durée ne pourra plus changer une fois le groupe créé.</p>}
+      {days >= 1 && days <= 365 && start && groupCrossesRamadan(start, days) && (
+        <p class="note ramadan-cross">🌙 Ce khatm croise le Ramadan (estimé du {formatDate(ramadanStart(), false)} au {formatDate(ramadanEnd(), false)}). Pendant le mois, seuls les groupes du Ramadan (29 jours) sont possibles : le groupe fera une pause, puis reprendra après l'Aïd. Il se terminera donc vers le <b>{formatDate(groupEnd(start, days), false)}</b> au lieu du {formatDate(addDays(start, days - 1), false)}.</p>
+      )}
       </>)}
       <button class="btn" disabled={!valid || busy} onClick={submit}>{busy ? 'Création…' : kind === 'guided' ? 'Créer le groupe encadré' : 'Créer le groupe'}</button>
       <button class="link" onClick={onCancel}>Annuler</button>
@@ -279,7 +291,10 @@ function GroupView({ slot }: { slot: GroupSlot }) {
         <div class="row"><h3>{g.name}</h3>{isAdmin && <span class="pill">{g.kind === 'guided' ? 'Vous encadrez' : 'Admin'}</span>}</div>
         <p class="note">{kindLabel(g.kind, g.gender, g.adminName)} · {N} jours · {programmeById(g.programmeId).name}</p>
         <p>{day < 1 ? `Commence le ${formatDate(g.khatam.start)}` : day > N ? 'Période terminée' : `Jour ${day} sur ${N}`} · jusqu'au {formatDate(endDate(g.khatam))}</p>
-        {!isR && groupPaused(s) && <p class="note">En pause pendant le Ramadan pour tout le groupe : reprise le {formatDate(addDays(ramadanEnd(), 1))}.</p>}
+        {!isR && groupPaused(s) && <p class="note">En pause pendant le Ramadan pour tout le groupe : pendant le mois, seuls les groupes du Ramadan (29 jours) sont possibles. Reprise le {formatDate(addDays(ramadanEnd(), 1))}.</p>}
+        {!isR && !groupPaused(s) && ramadanVisible() && todayISO() < ramadanStart() && groupCrossesRamadan(g.khatam.start, g.khatam.days) && (
+          <p class="note ramadan-cross">🌙 Pause du Ramadan à partir du {formatDate(ramadanStart())}, selon l'annonce de la lune. Pendant le mois, seuls les groupes du Ramadan (29 jours) sont possibles : faites votre khatm du Ramadan seul ou en groupe. Le groupe reprendra le {formatDate(addDays(ramadanEnd(), 1))}.</p>
+        )}
         {!live.online && <p class="note">Hors connexion : la liste se mettra à jour au retour du réseau.</p>}
       </div>)}
 

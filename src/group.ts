@@ -89,6 +89,8 @@ function localGroup(info: GroupInfo, role: 'admin' | 'member', section: Gender, 
 
 /** Les groupes du Ramadan s'ouvrent 3 jours avant le 1er jour, et jusqu'au dernier jour du mois. */
 export const RAMADAN_GROUPS_DAYS_BEFORE = 3;
+/** Le mois de Ramadan est en cours : les groupes de lecture sont en pause, on ne peut ni en créer ni en rejoindre. */
+export const inRamadanMonth = (today = todayISO()) => today >= ramadanStart() && today <= ramadanEnd();
 export const ramadanGroupsOpen = (today = todayISO()) => today >= addDays(ramadanStart(), -RAMADAN_GROUPS_DAYS_BEFORE) && today <= ramadanEnd();
 
 // ---- Créer, chercher, demander ----
@@ -141,6 +143,7 @@ export function joinBlock(info: GroupInfo, gender: Gender | null, s: State = get
   if (s[slot]?.id === info.id) return 'Vous faites déjà partie de ce groupe.';
   if (s[slot]) return info.purpose === 'ramadan' ? 'Vous êtes déjà dans un groupe du Ramadan.' : 'Vous êtes déjà dans un groupe de lecture : quittez-le d\'abord pour en rejoindre un autre.';
   if (s[requestKey(slot)]) return 'Vous avez déjà une demande en attente pour un autre groupe : annulez-la d\'abord.';
+  if (info.purpose === 'reading' && inRamadanMonth()) return `Pendant le Ramadan, seuls les groupes du Ramadan (29 jours) sont possibles. Vous pourrez rejoindre ce groupe après l'Aïd, à partir du ${formatDate(addDays(ramadanEnd(), 1))}, in shaa Allah.`;
   if (info.purpose === 'ramadan' && !ramadanGroupsOpen()) return `Les groupes du Ramadan s'ouvrent le ${formatDate(addDays(ramadanStart(), -RAMADAN_GROUPS_DAYS_BEFORE))}, in shaa Allah.`;
   if (info.purpose === 'ramadan' && !isCurrentSeason(info.season)) return info.season.endsWith('-essai') ? "Ce groupe a été créé avec les outils de test : simulez aussi un Ramadan sur ce téléphone (onglet Réglages) pour le rejoindre." : 'Ce groupe était pour un Ramadan précédent.';
   if (info.kind === 'classic' && info.gender && info.gender !== gender)
