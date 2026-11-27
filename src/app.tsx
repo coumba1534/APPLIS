@@ -71,7 +71,7 @@ export function App() {
   }, []);
   // Dans un groupe du Ramadan, on fait le khatm du Ramadan : il démarre tout seul au 1er jour (puis l'accueil du Ramadan s'ouvre).
   useEffect(() => {
-    if (s.group?.purpose === 'ramadan' && isCurrentSeason(s.group.season) && canJoinRamadan(s)) joinRamadan();
+    if (s.rgroup && isCurrentSeason(s.rgroup.season) && canJoinRamadan(s)) joinRamadan();
   });
   // Réglages à distance : à l'ouverture et chaque fois qu'on revient dans l'appli.
   useEffect(() => {

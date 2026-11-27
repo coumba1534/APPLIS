@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
-import { useStore, currentDay, endDate, formatDate, todayISO, addDays, groupPaused } from '../store';
-import type { Gender } from '../store';
+import { useStore, currentDay, endDate, formatDate, todayISO, addDays, groupPaused, requestKey } from '../store';
+import type { Gender, GroupSlot } from '../store';
 import { BUILT_IN, programmeById } from '../data/programmes';
 import { dayLabel } from '../data/khatam';
-import { ramadanEnd, ramadanStart, ramadanName, daysToRamadan, RAMADAN_KHATAM_DAYS } from '../config';
+import { ramadanEnd, ramadanStart, ramadanName, daysToRamadan, ramadanVisible, RAMADAN_KHATAM_DAYS } from '../config';
 import { daysBetween } from '../store';
 import { Moon, Stars, StarBurst } from './RamadanArt';
 import { APP_NAME } from '../brand';
@@ -12,18 +12,14 @@ import { GenderChoice } from './Profile';
 import { update } from '../store';
 import {
   createGroup, findGroup, requestJoin, cancelRequest, acceptRequest, refuseRequest, removeMember, leaveGroup,
-  joinBlock, cleanCode, inviteLink, useLive, MAX_MEMBERS,
+  joinBlock, cleanCode, inviteLink, useLive, MAX_MEMBERS, ramadanGroupsOpen, RAMADAN_GROUPS_DAYS_BEFORE,
 } from '../group';
 import type { GroupInfo, Member } from '../group';
 
 /**
- * Au lancement : seulement les groupes du Ramadan. Les groupes de lecture « toute l'année »
- * (avec ou sans encadrement) sont prêts et seront ouverts dans une mise à jour.
+ * Deux places : un groupe de lecture (toute l'année) et un groupe du Ramadan (ouvert 3 jours avant le 1er jour).
+ * Pendant le Ramadan, le groupe de lecture est en pause ; on peut faire le Ramadan seul ou en groupe du Ramadan.
  */
-export const GROUPS_ALL_YEAR = false;
-
-/** Les groupes du Ramadan s'ouvrent la veille du Ramadan et jusqu'à son dernier jour. */
-export const ramadanGroupsOpen = (today = todayISO()) => today >= addDays(ramadanStart(), -1) && today <= ramadanEnd();
 /** Jour du khatm du Ramadan (1 = 1er jour du Ramadan), pour tout le groupe. */
 const ramadanDay = () => daysBetween(ramadanStart(), todayISO()) + 1;
 
@@ -37,12 +33,16 @@ const kindLabel = (kind: 'classic' | 'guided', gender: Gender | null, adminName:
 const COLORS = ['#1F5C52', '#B8741F', '#7A5BA5', '#3C7EA6', '#A8503F', '#5E7A3A', '#8A6D3B', '#2F6F8F'];
 const colorOf = (uid: string) => COLORS[[...uid].reduce((t, c) => t + c.charCodeAt(0), 0) % COLORS.length];
 
+type Mode = null | { form: 'create' | 'guided' | 'join'; purpose: 'ramadan' | 'reading' };
+
 export function Group() {
   const s = useStore();
-  const [mode, setMode] = useState<null | 'create' | 'guided' | 'join'>(pendingCode ? 'join' : null);
+  const [mode, setMode] = useState<Mode>(pendingCode ? { form: 'join', purpose: 'reading' } : null);
+  const [view, setView] = useState<GroupSlot>('rgroup');
 
-  if (s.group) return <>{!s.group.welcomed && <GroupWelcome />}<GroupView /></>;
-  if (s.groupRequest) return <Pending />;
+  // Ouverture festive d'un groupe tout juste créé ou rejoint.
+  if (s.rgroup && !s.rgroup.welcomed) return <GroupWelcome slot="rgroup" />;
+  if (s.group && !s.group.welcomed) return <GroupWelcome slot="group" />;
   if (!s.gender) {
     return (
       <div class="card">
@@ -52,23 +52,46 @@ export function Group() {
       </div>
     );
   }
-  const purpose = GROUPS_ALL_YEAR ? 'reading' : 'ramadan';
-  if (mode === 'create' || mode === 'guided') return <CreateForm purpose={purpose} kind={mode === 'guided' ? 'guided' : 'classic'} onCancel={() => setMode(null)} />;
-  if (mode === 'join') return <JoinForm onCancel={() => { setPendingCode(''); setMode(null); }} />;
-  if (!GROUPS_ALL_YEAR) return <RamadanIntro onMode={setMode} />;
+  if (mode?.form === 'create' || mode?.form === 'guided') return <CreateForm purpose={mode.purpose} kind={mode.form === 'guided' ? 'guided' : 'classic'} onCancel={() => setMode(null)} />;
+  if (mode?.form === 'join') return <JoinForm onCancel={() => { setPendingCode(''); setMode(null); }} />;
+
+  const reading = s.group ? <GroupView slot="group" /> : s.groupRequest ? <Pending slot="group" /> : <ReadingHome onMode={setMode} />;
+  // Dans un groupe du Ramadan : deux onglets, le Ramadan et le groupe de lecture.
+  if (s.rgroup) {
+    return (
+      <>
+        <div class="seg slot-tabs" role="tablist">
+          <button aria-pressed={view === 'rgroup'} onClick={() => setView('rgroup')}>🌙 Ramadan</button>
+          <button aria-pressed={view === 'group'} onClick={() => setView('group')}>{s.group ? 'Groupe de lecture' : 'Lecture'}</button>
+        </div>
+        {view === 'rgroup' ? <GroupView slot="rgroup" /> : reading}
+      </>
+    );
+  }
+  return (
+    <>
+      {s.rgroupRequest ? <Pending slot="rgroup" /> : (ramadanGroupsOpen() || ramadanVisible()) && <RamadanIntro onMode={setMode} />}
+      {reading}
+    </>
+  );
+}
+
+/** Pas encore de groupe de lecture : créer, rejoindre, ou groupe encadré. */
+function ReadingHome({ onMode }: { onMode: (m: Mode) => void }) {
+  const s = useStore();
   return (
     <>
       <div class="card">
         <h3>Faire son khatm à plusieurs</h3>
         <p>Lisez le Coran en entier en même temps que vos proches, au même rythme. Chacun voit où en sont les autres, pour s'encourager.</p>
-        <p class="note">Groupe de {sectionWord(s.gender)} : vous ne pouvez rejoindre que des groupes de {sectionWord(s.gender)} ou des groupes encadrés.</p>
-        <button class="btn" onClick={() => setMode('create')}>Créer un groupe</button>
-        <button class="ghost" onClick={() => setMode('join')}>Rejoindre un groupe</button>
+        <p class="note">Groupe de {sectionWord(s.gender!)} : vous ne pouvez rejoindre que des groupes de {sectionWord(s.gender!)} ou des groupes encadrés.</p>
+        <button class="btn" onClick={() => onMode({ form: 'create', purpose: 'reading' })}>Créer un groupe</button>
+        <button class="ghost" onClick={() => onMode({ form: 'join', purpose: 'reading' })}>Rejoindre un groupe</button>
       </div>
       <div class="card guided-card">
         <h3>{s.gender === 'f' ? 'Vous êtes oustaza ?' : 'Vous êtes oustaz ?'}</h3>
         <p class="note">Créez un groupe pour vos auditeurs, sœurs et frères : chacun dans sa section, vous suivez tout le monde. Jusqu'à {MAX_MEMBERS.guided} membres.</p>
-        <button class="btn teal" onClick={() => setMode('guided')}>Créer un groupe encadré</button>
+        <button class="btn teal" onClick={() => onMode({ form: 'guided', purpose: 'reading' })}>Créer un groupe encadré</button>
       </div>
     </>
   );
@@ -92,6 +115,7 @@ function CreateForm({ kind, purpose, onCancel }: { kind: 'classic' | 'guided'; p
     setBusy(true);
     try {
       await createGroup({ name, kind, purpose, days, start, programmeId: prog });
+      onCancel(); // le formulaire se ferme : on arrive dans le groupe
     } catch (e) {
       console.error('Création du groupe', e);
       toast("Le groupe n'a pas pu être créé. Vérifiez la connexion et réessayez.");
@@ -164,17 +188,17 @@ function JoinForm({ onCancel }: { onCancel: () => void }) {
           <h3>{info.name}</h3>
           <p>{kindLabel(info.kind, info.gender, info.adminName)} · {info.memberCount} membre{info.memberCount > 1 ? 's' : ''} sur {MAX_MEMBERS[info.kind]}</p>
           <p class="note">{info.purpose === 'ramadan'
-            ? `Khatm du ${ramadanName()} : ${RAMADAN_KHATAM_DAYS} jours à partir du ${formatDate(ramadanStart())}, chacun à son rythme.`
+            ? `Groupe du Ramadan · khatm du ${ramadanName()} : ${RAMADAN_KHATAM_DAYS} jours à partir du ${formatDate(ramadanStart())}, chacun à son rythme.`
             : `Khatm de ${info.days} jours, à partir du ${formatDate(info.start)} · Programme « ${programmeById(info.programmeId).name} »`}</p>
           {block ? <p class="block-msg">{block}</p> : (
             <>
               <button class="btn" disabled={state === 'send'} onClick={async () => {
                 setState('send');
-                try { await requestJoin(info); setPendingCode(''); toast('Demande envoyée'); } catch (e) { toast((e as Error).message || 'La demande n\'a pas pu être envoyée'); setState('idle'); }
+                try { await requestJoin(info); setPendingCode(''); toast('Demande envoyée'); onCancel(); } catch (e) { toast((e as Error).message || 'La demande n\'a pas pu être envoyée'); setState('idle'); }
               }}>Demander à rejoindre</button>
               <p class="note">{info.purpose === 'ramadan'
                 ? "L'administrateur doit accepter votre demande. En rejoignant ce groupe, vous faites le khatm du Ramadan avec lui (votre khatm personnel est en pause pendant le mois)."
-                : "L'administrateur doit accepter votre demande. Vous ne pouvez être que dans un seul groupe à la fois ; votre khatm personnel continue à côté."}</p>
+                : "L'administrateur doit accepter votre demande. Vous ne pouvez être que dans un seul groupe de lecture à la fois ; votre khatm personnel continue à côté."}</p>
             </>
           )}
         </div>
@@ -184,14 +208,14 @@ function JoinForm({ onCancel }: { onCancel: () => void }) {
   );
 }
 
-function Pending() {
+function Pending({ slot }: { slot: GroupSlot }) {
   const s = useStore();
-  const r = s.groupRequest!;
+  const r = s[requestKey(slot)]!;
   return (
     <div class="card pending-card">
       <h3>Demande envoyée</h3>
       <p>Votre demande pour rejoindre « {r.name} » attend la réponse de l'administrateur. Vous serez prévenu{s.gender === 'f' ? 'e' : ''} dès qu'elle est acceptée.</p>
-      <button class="link" onClick={async () => { await cancelRequest(); toast('Demande annulée'); }}>Annuler la demande</button>
+      <button class="link" onClick={async () => { await cancelRequest(slot); toast('Demande annulée'); }}>Annuler la demande</button>
     </div>
   );
 }
@@ -214,10 +238,10 @@ function status(done: number, day: number, N: number, ramadan = false, doneDays:
   return { cls: 'late', label: `${today - 1 - done} j de retard` };
 }
 
-function GroupView() {
+function GroupView({ slot }: { slot: GroupSlot }) {
   const s = useStore();
-  const live = useLive();
-  const g = s.group!;
+  const live = useLive(slot);
+  const g = s[slot]!;
   const isR = g.purpose === 'ramadan';
   const N = isR ? RAMADAN_KHATAM_DAYS : g.khatam.days;
   const day = isR ? ramadanDay() : currentDay(s, 'group');
@@ -250,12 +274,12 @@ function GroupView() {
 
   return (
     <>
-      {isR ? <RamadanHead day={day} N={N} ended={ended} upToDate={upToDate} counted={counted} finished={live.stats.filter((x) => x.doneCount >= N).length} isAdmin={isAdmin} /> : (
+      {isR ? <RamadanHead slot={slot} day={day} N={N} ended={ended} upToDate={upToDate} counted={counted} finished={live.stats.filter((x) => x.doneCount >= N).length} isAdmin={isAdmin} /> : (
       <div class="card group-head">
         <div class="row"><h3>{g.name}</h3>{isAdmin && <span class="pill">{g.kind === 'guided' ? 'Vous encadrez' : 'Admin'}</span>}</div>
         <p class="note">{kindLabel(g.kind, g.gender, g.adminName)} · {N} jours · {programmeById(g.programmeId).name}</p>
         <p>{day < 1 ? `Commence le ${formatDate(g.khatam.start)}` : day > N ? 'Période terminée' : `Jour ${day} sur ${N}`} · jusqu'au {formatDate(endDate(g.khatam))}</p>
-        {groupPaused(s) && <p class="note">En pause pendant le Ramadan pour tout le groupe : reprise le {formatDate(addDays(ramadanEnd(), 1))}.</p>}
+        {!isR && groupPaused(s) && <p class="note">En pause pendant le Ramadan pour tout le groupe : reprise le {formatDate(addDays(ramadanEnd(), 1))}.</p>}
         {!live.online && <p class="note">Hors connexion : la liste se mettra à jour au retour du réseau.</p>}
       </div>)}
 
@@ -267,8 +291,8 @@ function GroupView() {
               <span class="av" style={{ background: colorOf(r.uid) }}>{r.name.slice(0, 1).toUpperCase()}</span>
               <span><b>{r.name}</b>{g.kind === 'guided' && <small>{r.gender === 'f' ? 'Section Sœurs' : 'Section Frères'}</small>}</span>
               <span class="req-actions">
-                <button class="ghost" onClick={async () => { try { await acceptRequest(r.uid, r); toast(`${r.name} a rejoint le groupe`); } catch { toast('Le groupe est complet ou la connexion manque.'); } }}>Accepter</button>
-                <button class="ghost danger" onClick={async () => { await refuseRequest(r.uid); toast('Demande refusée'); }}>Refuser</button>
+                <button class="ghost" onClick={async () => { try { await acceptRequest(slot, r.uid, r); toast(`${r.name} a rejoint le groupe`); } catch { toast('Le groupe est complet ou la connexion manque.'); } }}>Accepter</button>
+                <button class="ghost danger" onClick={async () => { await refuseRequest(slot, r.uid); toast('Demande refusée'); }}>Refuser</button>
               </span>
             </div>
           ))}
@@ -325,7 +349,7 @@ function GroupView() {
           <p>Quitter « {g.name} » ? {isR ? 'Vous continuerez votre khatm du Ramadan seul, sans le groupe.' : 'Votre progression dans ce groupe sera perdue.'}{isAdmin ? (live.members.length > 1 ? ' Le groupe sera confié au membre arrivé le plus tôt.' : ' Vous êtes seul : le groupe sera supprimé.') : ''}</p>
           <div class="actions-row">
             <button class="btn danger-fill" onClick={async () => {
-              try { await leaveGroup(live.members.map((m) => ({ uid: m.uid, name: m.name, joinedOn: m.joinedOn }))); toast('Vous avez quitté le groupe'); }
+              try { await leaveGroup(slot, live.members.map((m) => ({ uid: m.uid, name: m.name, joinedOn: m.joinedOn }))); toast('Vous avez quitté le groupe'); }
               catch { toast("Impossible pour le moment : vérifiez la connexion."); }
             }}>Quitter</button>
             <button class="ghost" onClick={() => setLeaving(false)}>Annuler</button>
@@ -340,7 +364,7 @@ function GroupView() {
             <p class="note">{menu.done?.length ?? 0} jours lus sur {N} · dans le groupe depuis le {formatDate(menu.joinedOn, false)}</p>
             <button class="vact danger" onClick={async () => {
               const m = menu; setMenu(null);
-              try { await removeMember(m.uid); toast(`${m.name} ne fait plus partie du groupe`); } catch { toast('Impossible pour le moment : vérifiez la connexion.'); }
+              try { await removeMember(slot, m.uid); toast(`${m.name} ne fait plus partie du groupe`); } catch { toast('Impossible pour le moment : vérifiez la connexion.'); }
             }}>Retirer du groupe</button>
             <p class="note">{menu.name} recevra une notification. Son khatm personnel n'est pas touché.</p>
           </div>
@@ -353,7 +377,7 @@ function GroupView() {
 // ---- Groupes du Ramadan ----
 
 /** Onglet Groupe avant d'avoir un groupe, au lancement (seulement des groupes du Ramadan). */
-function RamadanIntro({ onMode }: { onMode: (m: 'create' | 'guided' | 'join') => void }) {
+function RamadanIntro({ onMode }: { onMode: (m: Mode) => void }) {
   const s = useStore();
   const n = daysToRamadan();
   if (!ramadanGroupsOpen()) {
@@ -364,11 +388,10 @@ function RamadanIntro({ onMode }: { onMode: (m: 'create' | 'guided' | 'join') =>
           <span class="nc-moon"><Moon k={0.15} size={40} /></span>
           <h3>{after ? 'Les groupes du Ramadan sont terminés' : 'Les groupes du Ramadan ouvrent bientôt'}</h3>
           {after
-            ? <p>Qu'Allah accepte la lecture de chacun. Les groupes du prochain Ramadan ouvriront la veille du mois, in shaa Allah.</p>
-            : <p>Dès la veille du Ramadan, le <b>{formatDate(addDays(ramadanStart(), -1))}</b> in shaa Allah, vous pourrez créer un groupe ou rejoindre celui de vos proches, pour lire le Coran en entier ensemble pendant le mois.</p>}
+            ? <p>Qu'Allah accepte la lecture de chacun. Les groupes du prochain Ramadan ouvriront {RAMADAN_GROUPS_DAYS_BEFORE} jours avant le mois, in shaa Allah.</p>
+            : <p>Faites votre khatm du Ramadan <b>seul{s.gender === 'f' ? 'e' : ''} ou en groupe</b>. À partir du <b>{formatDate(addDays(ramadanStart(), -RAMADAN_GROUPS_DAYS_BEFORE))}</b> in shaa Allah, vous pourrez créer un groupe du Ramadan ou rejoindre celui de vos proches{s.group ? ' (votre groupe de lecture sera en pause pendant le mois)' : ''}.</p>}
           {!after && n > 1 && <p class="note">{ramadanName()} commence dans {n} jours, selon l'annonce de la lune.</p>}
         </div>
-        <p class="note" style="text-align:center">Vous préférez le faire seul{s.gender === 'f' ? 'e' : ''} ? Le khatm du Ramadan s'ouvrira le 1er jour sur l'écran Aujourd'hui.</p>
       </>
     );
   }
@@ -377,28 +400,24 @@ function RamadanIntro({ onMode }: { onMode: (m: 'create' | 'guided' | 'join') =>
     <>
       <div class="card night-card">
         <span class="nc-moon"><Moon k={started ? Math.min(ramadanDay() / RAMADAN_KHATAM_DAYS, 1) : 0.08} size={40} /></span>
-        <h3>{started ? `${ramadanName()} : le khatm se fait aussi ensemble` : `${ramadanName()} commence demain, in shaa Allah`}</h3>
-        <p>Faites votre khatm du Ramadan avec vos proches : chacun lit le Coran en entier en {RAMADAN_KHATAM_DAYS} nuits, et vous vous encouragez. Groupe de {sectionWord(s.gender!)}.</p>
-        <button class="rw-btn wide" onClick={() => onMode('create')}>Créer un groupe du Ramadan</button>
-        <button class="nc-ghost" onClick={() => onMode('join')}>Rejoindre un groupe</button>
-      </div>
-      <div class="card guided-card">
-        <h3>{s.gender === 'f' ? 'Vous êtes oustaza ?' : 'Vous êtes oustaz ?'}</h3>
-        <p class="note">Un groupe du Ramadan pour vos auditeurs, sœurs et frères, chacun dans sa section : vous suivez tout le monde. Jusqu'à {MAX_MEMBERS.guided} membres.</p>
-        <button class="btn teal" onClick={() => onMode('guided')}>Créer un groupe encadré</button>
+        <h3>{started ? `${ramadanName()} : le khatm se fait aussi ensemble` : n === 1 ? `${ramadanName()} commence demain, in shaa Allah` : `${ramadanName()} commence dans ${n} jours`}</h3>
+        <p>Faites votre khatm du Ramadan seul{s.gender === 'f' ? 'e' : ''} ou en groupe : chacun lit le Coran en entier en {RAMADAN_KHATAM_DAYS} nuits, et vous vous encouragez. Groupe de {sectionWord(s.gender!)}.{s.group ? ' Votre groupe de lecture sera en pause pendant le mois.' : ''}</p>
+        <button class="rw-btn wide" onClick={() => onMode({ form: 'create', purpose: 'ramadan' })}>Créer un groupe du Ramadan</button>
+        <button class="nc-ghost" onClick={() => onMode({ form: 'join', purpose: 'ramadan' })}>Rejoindre un groupe du Ramadan</button>
+        <button class="nc-ghost" onClick={() => onMode({ form: 'guided', purpose: 'ramadan' })}>{s.gender === 'f' ? 'Oustaza' : 'Oustaz'} : créer un groupe encadré</button>
       </div>
     </>
   );
 }
 
 /** En-tête d'un groupe du Ramadan : compte à rebours, nuit en cours, puis fin commune à l'Aïd. */
-function RamadanHead({ day, N, ended, upToDate, counted, finished, isAdmin }: {
-  day: number; N: number; ended: boolean; upToDate: number; counted: number; finished: number; isAdmin: boolean;
+function RamadanHead({ slot, day, N, ended, upToDate, counted, finished, isAdmin }: {
+  slot: GroupSlot; day: number; N: number; ended: boolean; upToDate: number; counted: number; finished: number; isAdmin: boolean;
 }) {
   const s = useStore();
-  const g = s.group!;
+  const g = s[slot]!;
   const night = Math.min(day, N);
-  if (ended) return <RamadanGroupEnd finished={finished} counted={counted} />;
+  if (ended) return <RamadanGroupEnd slot={slot} finished={finished} counted={counted} />;
   return (
     <div class="card night-card group-head">
       <div class="row">
@@ -425,10 +444,10 @@ function RamadanHead({ day, N, ended, upToDate, counted, finished, isAdmin }: {
 }
 
 /** Fin commune à l'Aïd : le nombre de khatms terminés, une lune par membre, et la carte à partager. */
-function RamadanGroupEnd({ finished, counted }: { finished: number; counted: number }) {
+function RamadanGroupEnd({ slot, finished, counted }: { slot: GroupSlot; finished: number; counted: number }) {
   const s = useStore();
-  const live = useLive();
-  const g = s.group!;
+  const live = useLive(slot);
+  const g = s[slot]!;
   const [img, setImg] = useState<string | null>(null);
   const shareCard = async () => {
     const blob = await drawGroupCard(g.name, finished, counted);
@@ -440,7 +459,7 @@ function RamadanGroupEnd({ finished, counted }: { finished: number; counted: num
   };
   const close = () => {
     update((st) => ({
-      group: null,
+      [slot]: null,
       history: [{ id: `groupe-${g.id}`, name: `Groupe · ${g.name}`, kind: 'group' as const, start: ramadanStart(), days: RAMADAN_KHATAM_DAYS,
         doneDays: st.ramadanEnded?.doneDays ?? 0, end: ramadanEnd(), status: 'done' as const }, ...st.history.filter((h) => h.id !== `groupe-${g.id}`)],
     }));
@@ -500,13 +519,13 @@ async function drawGroupCard(name: string, finished: number, total: number): Pro
 }
 
 /** Ouverture festive quand on crée ou rejoint un groupe : ciel étoilé, lune, pluie d'étoiles. */
-function GroupWelcome() {
+function GroupWelcome({ slot }: { slot: GroupSlot }) {
   const s = useStore();
-  const g = s.group!;
+  const g = s[slot]!;
   const isR = g.purpose === 'ramadan';
   const [burst, setBurst] = useState(false);
   const creator = g.role === 'admin';
-  const done = () => { setBurst(true); window.setTimeout(() => update((st) => (st.group ? { group: { ...st.group, welcomed: true } } : {})), 1400); };
+  const done = () => { setBurst(true); window.setTimeout(() => update((st) => { const cur = st[slot]; return cur ? { [slot]: { ...cur, welcomed: true } } : {}; }), 1400); };
   const invite = async () => {
     const text = `Assalamou alaykoum ! Faisons notre khatm ${isR ? 'du Ramadan ' : ''}ensemble avec « ${g.name} ».\n\nRejoins-nous sur l'appli ${APP_NAME} : dans l'onglet Groupe, touche « Rejoindre un groupe » et entre le code ${g.code}.\nPas encore l'appli ? Ouvre ce lien dans Safari, puis « Sur l'écran d'accueil »`;
     try {

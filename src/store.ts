@@ -92,6 +92,10 @@ export interface GroupState {
 }
 /** Demande envoyée pour rejoindre un groupe, en attente de l'administrateur. */
 export interface GroupRequest { groupId: string; code: string; name: string; at: string }
+/** Les deux places de groupe : groupe de lecture (toute l'année) et groupe du Ramadan, qu'on peut avoir en même temps. */
+export type GroupSlot = 'group' | 'rgroup';
+export const requestKey = (slot: GroupSlot) => (slot === 'rgroup' ? 'rgroupRequest' : 'groupRequest') as 'rgroupRequest' | 'groupRequest';
+export const slotOf = (purpose: 'ramadan' | 'reading'): GroupSlot => (purpose === 'ramadan' ? 'rgroup' : 'group');
 export interface Track { id: TrackId; khatam: Khatam; done: number[]; sessions: Record<string, number[]>; catchPlan: CatchPlan | null }
 
 export interface HistoryItem {
@@ -127,9 +131,12 @@ export interface State {
   /** Code personnel de sauvegarde (KHTM-XXXX-XXXX), et s'il a été noté. */
   backupCode: string;
   backupNoted: boolean;
-  /** Le groupe dont on fait partie, et la demande en attente. */
+  /** Le groupe de lecture dont on fait partie, et la demande en attente. */
   group: GroupState | null;
   groupRequest: GroupRequest | null;
+  /** Le groupe du Ramadan dont on fait partie (en même temps qu'un groupe de lecture, en pause), et la demande en attente. */
+  rgroup: GroupState | null;
+  rgroupRequest: GroupRequest | null;
   /** Le khatam du Ramadan, si on l'a rejoint. */
   ramadan: RamadanState | null;
   /** Message à afficher après la fin du Ramadan (khatam terminé ou non). */
@@ -180,6 +187,8 @@ const initial: State = {
   backupNoted: false,
   group: null,
   groupRequest: null,
+  rgroup: null,
+  rgroupRequest: null,
   groupCode: '',
   programmeId: 'p1',
   customProgramme: [],
@@ -231,12 +240,19 @@ function renameKhatm(s: State): State {
   };
 }
 
+/** Ancienne version : le groupe du Ramadan était rangé à la place du groupe de lecture. */
+function splitGroups(s: State): State {
+  const out = { ...s, rgroup: s.rgroup ?? null, rgroupRequest: s.rgroupRequest ?? null };
+  if (out.group?.purpose === 'ramadan') { out.rgroup = out.group; out.group = null; }
+  return out;
+}
+
 function read(): State {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const data = JSON.parse(raw);
-      return renameKhatm(data.version === 2 && data.khatam ? { ...initial, ...data } : migrate(data));
+      return splitGroups(renameKhatm(data.version === 2 && data.khatam ? { ...initial, ...data } : migrate(data)));
     }
   } catch { /* stockage indisponible : on repart de zéro */ }
   return initial;
@@ -308,7 +324,7 @@ const ramadanDaysBetween = (a: string, b: string) => overlap(ramadanStart(), ram
 /** Vrai si le khatm du groupe est en pause aujourd'hui (Ramadan). */
 export function groupPaused(s: State = state) {
   const t = todayISO();
-  return !!s.group && s.group.purpose !== 'ramadan' && t >= s.group.khatam.start && t >= ramadanStart() && t <= ramadanEnd();
+  return !!s.group && t >= s.group.khatam.start && t >= ramadanStart() && t <= ramadanEnd();
 }
 
 /** Dernier jour d'un khatam (le khatam personnel et celui du groupe sont prolongés de leurs jours de pause). */

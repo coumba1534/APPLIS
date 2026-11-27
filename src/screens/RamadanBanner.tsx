@@ -2,6 +2,8 @@ import { useState } from 'preact/hooks';
 import { useStore, update, formatDate, joinRamadan, hasActiveKhatam, canJoinRamadan, ramadanDoneThisYear } from '../store';
 import { daysToRamadan, ramadanStart, ramadanVisible, ramadanName, ramadanEnd, useConfig } from '../config';
 import { toast } from '../ui';
+import { addDays } from '../store';
+import { ramadanGroupsOpen, RAMADAN_GROUPS_DAYS_BEFORE } from '../group';
 
 /**
  * Annonce du khatam du Ramadan.
@@ -17,11 +19,12 @@ export function RamadanBanner({ always = false }: { always?: boolean }) {
   const n = daysToRamadan();
   const before = n > 0;
   const open = canJoinRamadan(s);
+  const groupsOpen = ramadanGroupsOpen();
   // Clé de masquage : une pour l'annonce, une pour le mois (l'ancienne valeur, la date seule, vaut pour l'annonce).
   const hideKey = `${start}:${before ? 'annonce' : 'mois'}`;
   const hidden = !always && (s.hideRamadanBanner === hideKey || (before && s.hideRamadanBanner === start));
   // Dans un groupe du Ramadan : le khatm du Ramadan démarre tout seul au 1er jour.
-  if (s.group?.purpose === 'ramadan') return null;
+  if (s.rgroup) return null;
   if (!ramadanVisible() || s.ramadan || ramadanDoneThisYear(s) || hidden || (!before && !open)) return null;
   const personal = hasActiveKhatam(s) ? s.khatam : null;
   const restart = s.history.some((h) => h.kind === 'ramadan' && h.status === 'stopped' && h.start === start);
@@ -39,7 +42,7 @@ export function RamadanBanner({ always = false }: { always?: boolean }) {
         </div>
       </div>
       <p>{before
-        ? "Le khatm du Ramadan s'ouvrira le 1er jour : le Coran en entier en 29 jours, comme dans les mosquées. Vous pourrez le rejoindre ici."
+        ? <>Faites votre khatm du Ramadan <b>seul ou en groupe</b> : le Coran en entier en 29 jours, comme dans les mosquées. Seul : il s'ouvrira ici le 1er jour. En groupe : créez ou rejoignez un groupe du Ramadan dans l'onglet Groupe {groupsOpen ? 'dès maintenant' : `à partir du ${formatDate(addDays(start, -RAMADAN_GROUPS_DAYS_BEFORE))}`}.</>
         : 'Le Coran en entier en 29 jours, comme dans les mosquées : environ 21 pages par jour.'}</p>
       {before ? (
         !always && <div class="rb-actions"><button class="link" onClick={() => update({ hideRamadanBanner: hideKey })}>J'ai compris</button></div>

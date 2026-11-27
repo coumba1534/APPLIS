@@ -132,7 +132,7 @@ export function buildSchedule(s: State = getState()): Item[] {
     const inRamadan = date >= rStart && date <= addDays(rStart, RAMADAN_KHATAM_DAYS - 1);
     if (s.ramadan && inRamadan) dayItems(s, 'ramadan', date, daysBetween(s.ramadan.khatam.start, date) + 1, items);
     else if (s.khatam && !personalPausedOn(s, date)) dayItems(s, 'personal', date, pDay, items);
-    if (s.group && s.group.purpose === 'reading') {
+    if (s.group) {
       const gDay = daysBetween(s.group.khatam.start, date) + 1;
       if (!(date >= rStart && date <= rEnd)) dayItems(s, 'group', date, gDay, items);
     }
@@ -142,15 +142,15 @@ export function buildSchedule(s: State = getState()): Item[] {
   const doneThisYear = s.history.some((h) => h.id === rid);
   const announce = addDays(rStart, -10);
   if (!s.ramadan && !doneThisYear && announce >= today && ramadanVisible(announce)) {
-    items.push({ at: atTime(announce, '10:00'), title: `${ramadanName()} approche 🌙`, body: `Il commence le ${rStart.split('-').reverse().join('/')}, selon l'annonce de la lune. Le khatm du Ramadan s'ouvrira le 1er jour.`, tag: `annonce:${rid}` });
+    items.push({ at: atTime(announce, '10:00'), title: `${ramadanName()} approche 🌙`, body: `Il commence le ${rStart.split('-').reverse().join('/')}, selon l'annonce de la lune. Faites votre khatm du Ramadan seul ou en groupe : les groupes du Ramadan ouvrent 3 jours avant.`, tag: `annonce:${rid}` });
   }
-  if (!s.ramadan && !doneThisYear && s.group?.purpose !== 'ramadan' && rStart >= today) {
+  if (!s.ramadan && !doneThisYear && !s.rgroup && rStart >= today) {
     items.push({ at: atTime(rStart, '09:00'), title: 'Le khatm du Ramadan est ouvert 🌙', body: "Rejoignez-le dans l'appli : le Coran en entier en 29 jours, comme dans les mosquées.", tag: `ouvert:${rid}` });
   }
-  if (s.group?.purpose === 'ramadan' && rStart >= today) {
-    items.push({ at: atTime(rStart, '07:00'), title: 'Ramadan Moubarak 🌙', body: `Votre khatm du Ramadan commence aujourd'hui avec « ${s.group.name} ». Ouvrez l'appli pour choisir votre rythme. Bismillah !`, tag: `debut-groupe:${rid}` });
+  if (s.rgroup && rStart >= today) {
+    items.push({ at: atTime(rStart, '07:00'), title: 'Ramadan Moubarak 🌙', body: `Votre khatm du Ramadan commence aujourd'hui avec « ${s.rgroup.name} ». Ouvrez l'appli pour choisir votre rythme. Bismillah !`, tag: `debut-groupe:${rid}` });
   }
-  if ((s.ramadan || s.group?.purpose === 'ramadan') && s.ramadan?.extras?.last10 !== false) {
+  if ((s.ramadan || s.rgroup) && s.ramadan?.extras?.last10 !== false) {
     const d20 = addDays(rStart, 19);
     if (d20 >= today) items.push({ at: atTime(d20, '18:00'), title: 'Les 10 dernières nuits commencent ce soir 🌙', body: 'La dernière ligne droite de votre khatm du Ramadan. Courage, vous y êtes presque !', tag: `dix:${rid}` });
   }

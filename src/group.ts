@@ -11,10 +11,10 @@ import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import type { Firestore, Unsubscribe } from 'firebase/firestore';
 import { useEffect, useState } from 'preact/hooks';
-import { getState, update, subscribe, todayISO } from './store';
-import type { Gender, GroupState } from './store';
+import { getState, update, subscribe, todayISO, addDays, formatDate, requestKey, slotOf } from './store';
+import type { Gender, GroupState, GroupSlot, State } from './store';
 import { currentRamadanId, isCurrentSeason } from './store';
-import { ramadanStart, RAMADAN_KHATAM_DAYS } from './config';
+import { ramadanStart, ramadanEnd, RAMADAN_KHATAM_DAYS } from './config';
 import { pushGroupMessage, linkPushToAccount } from './push';
 
 export const firebaseConfig = {
@@ -87,6 +87,10 @@ function localGroup(info: GroupInfo, role: 'admin' | 'member', section: Gender, 
   };
 }
 
+/** Les groupes du Ramadan s'ouvrent 3 jours avant le 1er jour, et jusqu'au dernier jour du mois. */
+export const RAMADAN_GROUPS_DAYS_BEFORE = 3;
+export const ramadanGroupsOpen = (today = todayISO()) => today >= addDays(ramadanStart(), -RAMADAN_GROUPS_DAYS_BEFORE) && today <= ramadanEnd();
+
 // ---- Créer, chercher, demander ----
 
 export async function createGroup(p: { name: string; kind: 'classic' | 'guided'; purpose: 'ramadan' | 'reading'; days: number; start: string; programmeId: string }) {
@@ -114,7 +118,8 @@ export async function createGroup(p: { name: string; kind: 'classic' | 'guided';
   batch.set(fs.doc(db, 'groups', ref.id, 'members', uid), { name: info.adminName, gender: s.gender, section: s.gender, role: 'admin', joinedOn: todayISO(), done: [], sessions: {} });
   batch.set(fs.doc(db, 'groups', ref.id, 'stats', uid), { section: s.gender, doneCount: 0, done: [] });
   await batch.commit();
-  update({ group: localGroup(info, 'admin', s.gender, todayISO()), groupRequest: null });
+  const slot = slotOf(info.purpose);
+  update({ [slot]: localGroup(info, 'admin', s.gender, todayISO()), [requestKey(slot)]: null } as Partial<State>);
   return info;
 }
 
@@ -130,8 +135,13 @@ export async function findGroup(codeInput: string): Promise<GroupInfo | null> {
 }
 
 /** Peut-on demander à entrer ? Pas de mixité dans les groupes classiques, et une limite de membres. */
-export function joinBlock(info: GroupInfo, gender: Gender | null): string | null {
+export function joinBlock(info: GroupInfo, gender: Gender | null, s: State = getState()): string | null {
   if (!gender) return 'Indiquez d\'abord dans « Mon profil » (onglet Réglages) si vous êtes une femme ou un homme.';
+  const slot = slotOf(info.purpose);
+  if (s[slot]?.id === info.id) return 'Vous faites déjà partie de ce groupe.';
+  if (s[slot]) return info.purpose === 'ramadan' ? 'Vous êtes déjà dans un groupe du Ramadan.' : 'Vous êtes déjà dans un groupe de lecture : quittez-le d\'abord pour en rejoindre un autre.';
+  if (s[requestKey(slot)]) return 'Vous avez déjà une demande en attente pour un autre groupe : annulez-la d\'abord.';
+  if (info.purpose === 'ramadan' && !ramadanGroupsOpen()) return `Les groupes du Ramadan s'ouvrent le ${formatDate(addDays(ramadanStart(), -RAMADAN_GROUPS_DAYS_BEFORE))}, in shaa Allah.`;
   if (info.purpose === 'ramadan' && !isCurrentSeason(info.season)) return info.season.endsWith('-essai') ? "Ce groupe a été créé avec les outils de test : simulez aussi un Ramadan sur ce téléphone (onglet Réglages) pour le rejoindre." : 'Ce groupe était pour un Ramadan précédent.';
   if (info.kind === 'classic' && info.gender && info.gender !== gender)
     return info.gender === 'f' ? 'Ce groupe est réservé aux sœurs.' : 'Ce groupe est réservé aux frères.';
@@ -145,7 +155,7 @@ export async function requestJoin(info: GroupInfo) {
   if (block) throw new Error(block);
   const { db, fs, uid } = await fb();
   await fs.setDoc(fs.doc(db, 'groups', info.id, 'requests', uid), { name: s.name || 'Sans prénom', gender: s.gender, at: fs.serverTimestamp() });
-  update({ groupRequest: { groupId: info.id, code: info.code, name: info.name, at: todayISO() } });
+  update({ [requestKey(slotOf(info.purpose))]: { groupId: info.id, code: info.code, name: info.name, at: todayISO() } } as Partial<State>);
   // Prévenir l'administrateur qu'une demande l'attend.
   try {
     const { auth } = await fb();
@@ -153,12 +163,12 @@ export async function requestJoin(info: GroupInfo) {
   } catch { /* sans réseau : il la verra à l'ouverture */ }
 }
 
-export async function cancelRequest() {
-  const r = getState().groupRequest;
+export async function cancelRequest(slot: GroupSlot) {
+  const r = getState()[requestKey(slot)];
   if (!r) return;
   const { db, fs, uid } = await fb();
   await fs.deleteDoc(fs.doc(db, 'groups', r.groupId, 'requests', uid)).catch(() => {});
-  update({ groupRequest: null });
+  update({ [requestKey(slot)]: null } as Partial<State>);
 }
 
 // ---- Administration ----
@@ -170,8 +180,8 @@ async function notifyMember(memberUid: string, type: 'accepted' | 'refused' | 'r
   try { await pushGroupMessage({ idToken: await auth.currentUser!.getIdToken(), target: memberUid, type, groupId: g.id }); } catch { /* sans réseau : le message s'affichera à l'ouverture */ }
 }
 
-export async function acceptRequest(reqUid: string, req: { name: string; gender: Gender }) {
-  const g = getState().group;
+export async function acceptRequest(slot: GroupSlot, reqUid: string, req: { name: string; gender: Gender }) {
+  const g = getState()[slot];
   if (!g || g.role !== 'admin') return;
   const { db, fs } = await fb();
   await fs.runTransaction(db, async (tx) => {
@@ -187,16 +197,16 @@ export async function acceptRequest(reqUid: string, req: { name: string; gender:
   await notifyMember(reqUid, 'accepted', g);
 }
 
-export async function refuseRequest(reqUid: string) {
-  const g = getState().group;
+export async function refuseRequest(slot: GroupSlot, reqUid: string) {
+  const g = getState()[slot];
   if (!g || g.role !== 'admin') return;
   const { db, fs } = await fb();
   await fs.deleteDoc(fs.doc(db, 'groups', g.id, 'requests', reqUid));
   await notifyMember(reqUid, 'refused', g);
 }
 
-export async function removeMember(memberUid: string) {
-  const g = getState().group;
+export async function removeMember(slot: GroupSlot, memberUid: string) {
+  const g = getState()[slot];
   if (!g || g.role !== 'admin') return;
   const { db, fs } = await fb();
   const batch = fs.writeBatch(db);
@@ -211,8 +221,8 @@ export async function removeMember(memberUid: string) {
  * Quitter le groupe. L'administrateur qui part confie le groupe au membre arrivé le plus tôt ;
  * s'il était seul, le groupe et son code disparaissent.
  */
-export async function leaveGroup(others: { uid: string; name: string; joinedOn: string }[]) {
-  const g = getState().group;
+export async function leaveGroup(slot: GroupSlot, others: { uid: string; name: string; joinedOn: string }[]) {
+  const g = getState()[slot];
   if (!g) return;
   const { db, fs, uid } = await fb();
   const batch = fs.writeBatch(db);
@@ -231,7 +241,7 @@ export async function leaveGroup(others: { uid: string; name: string; joinedOn: 
   batch.delete(fs.doc(db, 'groups', g.id, 'members', uid));
   batch.delete(fs.doc(db, 'groups', g.id, 'stats', uid));
   await batch.commit();
-  update({ group: null });
+  update({ [slot]: null } as Partial<State>);
 }
 
 // ---- Synchronisation ----
@@ -241,15 +251,16 @@ export interface Stat { uid: string; section: Gender; doneCount: number; done?: 
 export interface Request { uid: string; name: string; gender: Gender }
 export interface Live { members: Member[]; stats: Stat[]; requests: Request[]; online: boolean; me: string }
 
-let live: Live = { members: [], stats: [], requests: [], online: false, me: '' };
+const emptyLive = (): Live => ({ members: [], stats: [], requests: [], online: false, me: '' });
+const lives: Record<GroupSlot, Live> = { group: emptyLive(), rgroup: emptyLive() };
 const liveListeners = new Set<() => void>();
-const setLive = (p: Partial<Live>) => { live = { ...live, ...p }; liveListeners.forEach((l) => l()); };
+const setLive = (slot: GroupSlot, p: Partial<Live>) => { lives[slot] = { ...lives[slot], ...p }; liveListeners.forEach((l) => l()); };
 
-/** Membres, chiffres et demandes du groupe, mis à jour en direct. */
-export function useLive(): Live {
+/** Membres, chiffres et demandes d'un groupe (lecture ou Ramadan), mis à jour en direct. */
+export function useLive(slot: GroupSlot): Live {
   const [, force] = useState(0);
   useEffect(() => { const l = () => force((n) => n + 1); liveListeners.add(l); return () => { liveListeners.delete(l); }; }, []);
-  return live;
+  return lives[slot];
 }
 
 /** Message à afficher à l'ouverture (accepté, refusé, retiré). */
@@ -257,10 +268,11 @@ export type Notice = { type: 'accepted' | 'refused' | 'removed'; groupName: stri
 let onNotice: (n: Notice) => void = () => {};
 export const setNoticeHandler = (f: (n: Notice) => void) => { onNotice = f; };
 
-let watching = '';
-let unsubs: Unsubscribe[] = [];
-let pushTimer: number | undefined;
-let lastPushed = '';
+const SLOTS: GroupSlot[] = ['group', 'rgroup'];
+/** Ce qu'on écoute : les messages pour moi, puis chaque groupe (clé → désabonnements). */
+const watching: Record<string, Unsubscribe[]> = {};
+const pushTimer: Record<GroupSlot, number | undefined> = { group: undefined, rgroup: undefined };
+const lastPushed: Record<GroupSlot, string> = { group: '', rgroup: '' };
 
 /** Démarre la synchronisation : à appeler une fois au lancement de l'appli. */
 export function startGroupSync() {
@@ -269,74 +281,79 @@ export function startGroupSync() {
   run();
 }
 
+function unwatch(key: string) { (watching[key] ?? []).forEach((u) => u()); delete watching[key]; }
+
 async function sync() {
   const s = getState();
+  const busy = SLOTS.some((sl) => s[sl] || s[requestKey(sl)]);
   // Rien à suivre : pas de groupe, pas de demande. On ne charge même pas Firebase.
-  if (!s.group && !s.groupRequest) { stopWatching(); return; }
+  if (!busy) { Object.keys(watching).forEach(unwatch); return; }
   let f: Fb;
-  try { f = await fb(); } catch { setLive({ online: false }); return; }
+  try { f = await fb(); } catch { SLOTS.forEach((sl) => setLive(sl, { online: false })); return; }
   const { db, fs, uid } = f;
-  const g = getState().group;
-  const key = g ? `g:${g.id}:${g.role}:${g.section}` : `r:${getState().groupRequest?.groupId}`;
-  if (key !== watching) {
-    stopWatching();
-    watching = key;
-    // Messages pour moi : demande acceptée ou refusée, retrait du groupe.
-    unsubs.push(fs.onSnapshot(fs.collection(db, 'notices', uid, 'items'), (snap) => {
+  // Messages pour moi : demande acceptée ou refusée, retrait d'un groupe.
+  if (!watching.notices) {
+    watching.notices = [fs.onSnapshot(fs.collection(db, 'notices', uid, 'items'), (snap) => {
       snap.docChanges().forEach((ch) => {
         if (ch.type !== 'added') return;
         const d = ch.doc.data();
         void handleNotice({ type: d.type, groupName: String(d.groupName ?? '') }, String(d.groupId ?? ''));
         void fs.deleteDoc(ch.doc.ref);
       });
-    }));
-    if (g) {
-      unsubs.push(fs.onSnapshot(fs.doc(db, 'groups', g.id), (d) => {
-        if (!d.exists()) { if (getState().group?.id === g.id) update({ group: null }); return; }
+    })];
+  }
+  for (const slot of SLOTS) {
+    const g = getState()[slot];
+    const key = g ? `${slot}:${g.id}:${g.role}:${g.section}` : '';
+    const old = Object.keys(watching).find((k) => k.startsWith(`${slot}:`));
+    if (old && old !== key) unwatch(old);
+    if (!g) { if (old) setLive(slot, emptyLive()); continue; }
+    if (!watching[key]) {
+      const u: Unsubscribe[] = (watching[key] = []);
+      u.push(fs.onSnapshot(fs.doc(db, 'groups', g.id), (d) => {
+        if (!d.exists()) { if (getState()[slot]?.id === g.id) update({ [slot]: null } as Partial<State>); return; }
         const info = toInfo(d.id, d.data());
-        const cur = getState().group;
+        const cur = getState()[slot];
         if (!cur || cur.id !== g.id) return;
         const role = info.adminUid === uid ? 'admin' : 'member';
-        update({ group: { ...cur, name: info.name, adminUid: info.adminUid, adminName: info.adminName, role, programmeId: info.programmeId, khatam: { ...cur.khatam, name: info.name, start: info.start, days: info.days } } });
+        update({ [slot]: { ...cur, name: info.name, adminUid: info.adminUid, adminName: info.adminName, role, programmeId: info.programmeId, khatam: { ...cur.khatam, name: info.name, start: info.start, days: info.days } } } as Partial<State>);
       }));
       // Membres visibles : tout le groupe classique ; dans un groupe encadré, sa section (l'encadrant voit tout).
       const mcol = fs.collection(db, 'groups', g.id, 'members');
       const mq = g.kind === 'guided' && g.role !== 'admin' ? fs.query(mcol, fs.where('section', '==', g.section)) : mcol;
-      unsubs.push(fs.onSnapshot(mq, (snap) => {
+      u.push(fs.onSnapshot(mq, (snap) => {
         const members = snap.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<Member, 'uid'>) }));
-        setLive({ members, online: true, me: uid });
+        setLive(slot, { members, online: true, me: uid });
         // Retiré du groupe : ma fiche a disparu.
-        if (snap.metadata.fromCache === false && !members.some((m) => m.uid === uid) && getState().group?.id === g.id) {
-          update({ group: null });
+        if (snap.metadata.fromCache === false && !members.some((m) => m.uid === uid) && getState()[slot]?.id === g.id) {
+          update({ [slot]: null } as Partial<State>);
         }
-      }, () => setLive({ online: false })));
-      unsubs.push(fs.onSnapshot(fs.collection(db, 'groups', g.id, 'stats'), (snap) => {
-        setLive({ stats: snap.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<Stat, 'uid'>) })) });
+      }, () => setLive(slot, { online: false })));
+      u.push(fs.onSnapshot(fs.collection(db, 'groups', g.id, 'stats'), (snap) => {
+        setLive(slot, { stats: snap.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<Stat, 'uid'>) })) });
       }, () => {}));
       if (g.role === 'admin') {
-        unsubs.push(fs.onSnapshot(fs.collection(db, 'groups', g.id, 'requests'), (snap) => {
-          setLive({ requests: snap.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<Request, 'uid'>) })) });
+        u.push(fs.onSnapshot(fs.collection(db, 'groups', g.id, 'requests'), (snap) => {
+          setLive(slot, { requests: snap.docs.map((d) => ({ uid: d.id, ...(d.data() as Omit<Request, 'uid'>) })) });
         }, () => {}));
-      } else setLive({ requests: [] });
+      } else setLive(slot, { requests: [] });
     }
-  }
-  // Envoyer ma progression (jours lus, séances cochées) quand elle change.
-  if (g) {
-    const prog = progressOf(getState());
-    const payload = prog ? JSON.stringify([prog.done, prog.sessions]) : lastPushed;
-    if (payload !== lastPushed) {
-      window.clearTimeout(pushTimer);
-      pushTimer = window.setTimeout(async () => {
-        const cur = getState().group;
+    // Envoyer ma progression (jours lus, séances cochées) quand elle change.
+    const prog = progressOf(getState(), slot);
+    const payload = prog ? JSON.stringify([prog.done, prog.sessions]) : lastPushed[slot];
+    if (payload !== lastPushed[slot]) {
+      window.clearTimeout(pushTimer[slot]);
+      pushTimer[slot] = window.setTimeout(async () => {
+        const cur = getState()[slot];
         if (!cur) return;
-        const p = progressOf(getState());
+        const p = progressOf(getState(), slot);
         if (!p) return;
         try {
           const batch = fs.writeBatch(db);
           batch.update(fs.doc(db, 'groups', cur.id, 'members', uid), { done: p.done, sessions: p.sessions });
           batch.update(fs.doc(db, 'groups', cur.id, 'stats', uid), { doneCount: p.done.length, done: p.done });
           await batch.commit();
-          lastPushed = JSON.stringify([p.done, p.sessions]);
+          lastPushed[slot] = JSON.stringify([p.done, p.sessions]);
         } catch { /* hors connexion : Firestore renverra plus tard */ }
       }, 800);
     }
@@ -344,33 +361,32 @@ async function sync() {
 }
 
 /** Ce qu'on partage avec le groupe : le khatm du Ramadan pour un groupe du Ramadan, le khatm du groupe sinon. */
-function progressOf(s: ReturnType<typeof getState>): { done: number[]; sessions: Record<string, number[]> } | null {
-  const g = s.group!;
+function progressOf(s: State, slot: GroupSlot): { done: number[]; sessions: Record<string, number[]> } | null {
+  const g = s[slot];
+  if (!g) return null;
   // Groupe du Ramadan : rien à envoyer avant d'avoir commencé, ni après l'Aïd (le khatm est alors rangé dans l'historique).
-  if (g.purpose === 'ramadan') return s.ramadan ? { done: s.ramadan.done, sessions: s.ramadan.sessions } : null;
+  if (slot === 'rgroup') return s.ramadan ? { done: s.ramadan.done, sessions: s.ramadan.sessions } : null;
   return { done: g.done, sessions: g.sessions };
-}
-
-function stopWatching() {
-  unsubs.forEach((u) => u());
-  unsubs = [];
-  watching = '';
 }
 
 /** Une demande acceptée : on entre dans le groupe (et on récupère sa progression si on l'avait déjà). */
 async function handleNotice(n: Notice, groupId: string) {
   const s = getState();
-  if (n.type === 'accepted' && s.groupRequest?.groupId === groupId) {
+  const reqSlot = SLOTS.find((sl) => s[requestKey(sl)]?.groupId === groupId);
+  if (n.type === 'accepted' && reqSlot) {
     const { db, fs, uid } = await fb();
     const g = await fs.getDoc(fs.doc(db, 'groups', groupId));
     const m = await fs.getDoc(fs.doc(db, 'groups', groupId, 'members', uid));
     if (g.exists() && m.exists()) {
       const md = m.data();
-      const local = localGroup(toInfo(g.id, g.data()), 'member', md.section, String(md.joinedOn ?? todayISO()));
-      update({ group: { ...local, done: md.done ?? [], sessions: md.sessions ?? {} }, groupRequest: null });
+      const info = toInfo(g.id, g.data());
+      const slot = slotOf(info.purpose);
+      const local = localGroup(info, 'member', md.section, String(md.joinedOn ?? todayISO()));
+      update({ [slot]: { ...local, done: md.done ?? [], sessions: md.sessions ?? {} }, [requestKey(reqSlot)]: null } as Partial<State>);
     }
   }
-  if (n.type === 'refused' && s.groupRequest?.groupId === groupId) update({ groupRequest: null });
-  if (n.type === 'removed' && s.group?.id === groupId) update({ group: null });
+  if (n.type === 'refused' && reqSlot) update({ [requestKey(reqSlot)]: null } as Partial<State>);
+  const memberSlot = SLOTS.find((sl) => s[sl]?.id === groupId);
+  if (n.type === 'removed' && memberSlot) update({ [memberSlot]: null } as Partial<State>);
   onNotice(n);
 }

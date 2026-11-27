@@ -71,7 +71,7 @@ export function Reminders() {
         </div>
       </div>
       <h2>Mon profil</h2>
-      <ProfileCard inGroup={!!s.group || !!s.groupRequest} />
+      <ProfileCard inGroup={!!(s.group || s.groupRequest || s.rgroup || s.rgroupRequest)} />
       <BackupCard />
       <h2>À propos</h2>
       <div class="card about">
